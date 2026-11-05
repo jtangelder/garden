@@ -38,7 +38,7 @@
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .dashboard-main {
@@ -71,10 +71,6 @@
   margin: 0 auto;
 }
 
-.detail-container {
-  max-width: 860px;
-}
-
 .schedule-controls-bar {
   display: flex;
   flex-wrap: wrap;
@@ -86,6 +82,16 @@
 
 .horizon-field {
   width: 140px;
+}
+
+.search-field {
+  flex: 1 1 320px;
+  max-width: 440px;
+}
+
+.sheet-hint-text {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .table-surface {
@@ -113,6 +119,23 @@
   }
 }
 
+.clickable-plant-row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+}
+
+.plant-name-primary {
+  font-weight: 500;
+}
+
+.cell-actions {
+  white-space: nowrap;
+}
+
 .cell-nowrap {
   white-space: nowrap;
 }
@@ -127,26 +150,26 @@
   margin-top: 2px;
 }
 
-.plant-detail-card {
-  background: var(--mat-sys-surface-container-lowest);
-  border-radius: 16px;
-  padding: 8px;
+.plant-dialog-content {
+  padding-top: 4px;
 }
 
-.plant-card-body {
-  padding-top: 16px;
+.plant-dialog-subtitle {
+  margin: 0 0 12px;
+  font-size: 0.84rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .care-notes-copy {
-  margin: 0 0 24px;
+  margin: 0 0 20px;
   font-size: 0.9rem;
   line-height: 1.6;
-  max-width: 75ch;
+  max-width: 70ch;
   color: var(--mat-sys-on-surface);
 }
 
 .care-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
 }

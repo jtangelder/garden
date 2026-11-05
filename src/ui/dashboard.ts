@@ -1,11 +1,21 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  type TemplateRef,
+  computed,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
@@ -13,7 +23,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MONTH_NAMES, type MonthNumber, type TaskActionType } from '../lib/models';
+import { MONTH_NAMES, type MonthNumber, type PlantRecord, type TaskActionType } from '../lib/models';
 import { formatMonthsCell, formatMonthsFull } from '../lib/sheet_parser';
 import { GardenService } from '../services/garden.service';
 import { PhotoPlantDialogComponent } from './photo_plant_dialog';
@@ -33,9 +43,11 @@ import { WelcomeComponent } from './welcome';
     MatBadgeModule,
     MatProgressBarModule,
     MatFormFieldModule,
+    MatInputModule,
     MatSelectModule,
     MatMenuModule,
     MatTooltipModule,
+    MatDialogModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.ng.html',
@@ -43,10 +55,25 @@ import { WelcomeComponent } from './welcome';
 })
 export class DashboardComponent {
   readonly isMobile = input<boolean>(false);
-  readonly toggleSidebar = output<void>();
 
   protected readonly service = inject(GardenService);
   private readonly dialog = inject(MatDialog);
+  private readonly plantDetailDialogTpl = viewChild<TemplateRef<unknown>>('plantDetailDialogTpl');
+
+  protected readonly plantSearchQuery = signal('');
+
+  protected readonly filteredPlants = computed(() => {
+    const query = this.plantSearchQuery().trim().toLowerCase();
+    const all = this.service.plants();
+    if (!query) return all;
+    return all.filter(
+      plant =>
+        plant.name.toLowerCase().includes(query) ||
+        plant.species.toLowerCase().includes(query) ||
+        plant.location.toLowerCase().includes(query) ||
+        plant.careNotes.toLowerCase().includes(query),
+    );
+  });
 
   protected readonly scheduleColumns = ['date', 'action', 'plants', 'locations', 'syncStatus'] as const;
 
@@ -83,6 +110,31 @@ export class DashboardComponent {
 
   protected onHorizonChange(days: number): void {
     this.service.updateConfig({ planningHorizonDays: days });
+  }
+
+  protected onPlantSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.plantSearchQuery.set(target?.value ?? '');
+  }
+
+  protected clearPlantSearch(): void {
+    this.plantSearchQuery.set('');
+  }
+
+  protected openPlantDetailDialog(plant: PlantRecord): void {
+    this.service.selectedPlantRow.set(plant.rowNumber);
+    const tpl = this.plantDetailDialogTpl();
+    if (!tpl) return;
+    this.dialog.open(tpl, {
+      width: '620px',
+      maxWidth: '94dvw',
+      autoFocus: 'first-tabbable',
+    });
+  }
+
+  protected removeSelectedPlantAndClose(rowNumber: number): void {
+    this.dialog.closeAll();
+    void this.service.removePlant(rowNumber);
   }
 
   protected async onConnectClick(): Promise<void> {

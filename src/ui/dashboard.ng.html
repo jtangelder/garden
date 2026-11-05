@@ -1,17 +1,5 @@
 <header>
   <mat-toolbar class="top-toolbar">
-    @if (isMobile()) {
-      <button
-        mat-icon-button
-        type="button"
-        aria-label="Zijbalk openen"
-        matTooltip="Plantenlijst"
-        (click)="toggleSidebar.emit()"
-      >
-        <mat-icon aria-hidden="true">menu</mat-icon>
-      </button>
-    }
-
     <h1 class="toolbar-title">{{ service.sheetTitle() }}</h1>
     <span class="status-badge">
       {{ service.isDemo() ? 'Demo' : 'Verbonden' }}
@@ -20,9 +8,19 @@
     <span class="toolbar-spacer"></span>
 
     <div class="toolbar-actions">
+      <button
+        matButton="tonal"
+        type="button"
+        matTooltip="Maak een foto van een plant en voeg deze toe aan je Google Sheet"
+        (click)="openAddPlantPhotoDialog()"
+      >
+        <mat-icon aria-hidden="true">add_a_photo</mat-icon>
+        <span>{{ isMobile() ? 'Foto' : 'Foto van plant' }}</span>
+      </button>
+
       @if (service.unenrichedCount() > 0 && !isMobile()) {
         <button
-          matButton="tonal"
+          mat-stroked-button
           type="button"
           [disabled]="service.enriching()"
           matTooltip="Vul ontbrekende verzorgingsschema's automatisch aan"
@@ -60,6 +58,16 @@
           <span>{{ isMobile() ? 'Inloggen' : 'Koppel Google' }}</span>
         </button>
       }
+
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Bronnen en instellingen"
+        matTooltip="Bronnen & Instellingen"
+        (click)="openSettingsDialog()"
+      >
+        <mat-icon aria-hidden="true">settings</mat-icon>
+      </button>
 
       <button
         mat-icon-button
@@ -193,20 +201,47 @@
       </div>
     </mat-tab>
 
-    <!-- TAB 2: Planten in Google Spreadsheet -->
+    <!-- TAB 2: Planten in Google Spreadsheet (met zoeken & plantdetails opzoeken) -->
     <mat-tab [label]="'Planten in Sheet (' + service.plants().length + ')'">
       <div class="tab-scroll-pane">
         <div class="content-container">
+          <div class="schedule-controls-bar">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
+              <mat-label>Zoek plant, soort of locatie</mat-label>
+              <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+              <input
+                matInput
+                type="search"
+                [value]="plantSearchQuery()"
+                placeholder="Bijv. Hortensia, Lavendel of Voortuin..."
+                (input)="onPlantSearchInput($event)"
+              />
+              @if (plantSearchQuery()) {
+                <button
+                  mat-icon-button
+                  matSuffix
+                  type="button"
+                  aria-label="Zoekopdracht wissen"
+                  (click)="clearPlantSearch()"
+                >
+                  <mat-icon aria-hidden="true">close</mat-icon>
+                </button>
+              }
+            </mat-form-field>
+
+            <span class="sheet-hint-text">Klik op een plant voor uitgebreide verzorgingsdetails</span>
+          </div>
+
           <div class="table-surface">
-            <table mat-table [dataSource]="service.plants()" class="garden-table">
+            <table mat-table [dataSource]="filteredPlants()" class="garden-table">
               <caption class="visually-hidden">
-                Planten geladen uit Google Spreadsheets met onderhoudsschema
+                Planten geladen uit Google Spreadsheets met onderhoudsschema. Klik op een rij voor details.
               </caption>
 
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef scope="col">Plant</th>
                 <td mat-cell *matCellDef="let plant">
-                  <div>{{ plant.name }}</div>
+                  <div class="plant-name-primary">{{ plant.name }}</div>
                   @if (plant.species) {
                     <div class="cell-subtext">{{ plant.species }}</div>
                   }
@@ -246,14 +281,22 @@
               </ng-container>
 
               <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef scope="col"></th>
-                <td mat-cell *matCellDef="let plant">
+                <th mat-header-cell *matHeaderCellDef scope="col">Details</th>
+                <td mat-cell *matCellDef="let plant" class="cell-actions">
+                  <button
+                    mat-button
+                    type="button"
+                    [attr.aria-label]="'Bekijk details van ' + plant.name"
+                    (click)="$event.stopPropagation(); openPlantDetailDialog(plant)"
+                  >
+                    <span>Details</span>
+                  </button>
                   <button
                     mat-icon-button
                     type="button"
                     [attr.aria-label]="'Verwijder ' + plant.name"
                     matTooltip="Verwijder plant uit spreadsheet"
-                    (click)="service.removePlant(plant.rowNumber)"
+                    (click)="$event.stopPropagation(); service.removePlant(plant.rowNumber)"
                   >
                     <mat-icon aria-hidden="true">delete_outline</mat-icon>
                   </button>
@@ -261,132 +304,130 @@
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="sheetColumns; sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: sheetColumns"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: sheetColumns"
+                class="clickable-plant-row"
+                (click)="openPlantDetailDialog(row)"
+              ></tr>
             </table>
           </div>
         </div>
       </div>
     </mat-tab>
-
-    <!-- TAB 3: Geselecteerde Plant Details -->
-    <mat-tab label="Plantdetails">
-      <div class="tab-scroll-pane">
-        <div class="content-container detail-container">
-          @if (service.selectedPlant(); as plant) {
-            <mat-card appearance="outlined" class="plant-detail-card">
-              <mat-card-header>
-                <mat-card-title>{{ plant.name }}</mat-card-title>
-                <mat-card-subtitle>
-                  {{ plant.species || 'Soort nog te verrijken' }}
-                  @if (plant.location) {
-                    &bull; {{ plant.location }}
-                  }
-                  &bull; Rij #{{ plant.rowNumber }}
-                </mat-card-subtitle>
-              </mat-card-header>
-
-              <mat-card-content class="plant-card-body">
-                <p class="care-notes-copy">
-                  {{
-                    plant.careNotes ||
-                      'Klik op "Verrijk" om automatisch het schema voor water geven, snoeien, knippen en bemesten voor deze plant te bepalen.'
-                  }}
-                </p>
-
-                <div class="care-grid">
-                  <mat-card appearance="outlined">
-                    <mat-card-header>
-                      <mat-card-title>Water geven</mat-card-title>
-                      <mat-card-subtitle>Seizoensfrequentie</mat-card-subtitle>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <p>
-                        Zomer (apr–sep):
-                        {{
-                          plant.wateringDaysSummer
-                            ? 'Elke ' + plant.wateringDaysSummer + ' dagen'
-                            : 'Nog niet ingesteld'
-                        }}
-                      </p>
-                      <p>
-                        Winter (okt–mrt):
-                        {{
-                          plant.wateringDaysWinter
-                            ? 'Elke ' + plant.wateringDaysWinter + ' dagen'
-                            : 'Natuurlijke neerslag'
-                        }}
-                      </p>
-                    </mat-card-content>
-                  </mat-card>
-
-                  <mat-card appearance="outlined">
-                    <mat-card-header>
-                      <mat-card-title>Hoofdsnoei</mat-card-title>
-                      <mat-card-subtitle>{{ formatMonthsLong(plant.pruningMonths) }}</mat-card-subtitle>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <mat-chip-set aria-label="Snoeimaanden">
-                        @for (m of plant.pruningMonths; track m) {
-                          <mat-chip>{{ monthName(m) }}</mat-chip>
-                        }
-                      </mat-chip-set>
-                    </mat-card-content>
-                  </mat-card>
-
-                  <mat-card appearance="outlined">
-                    <mat-card-header>
-                      <mat-card-title>Knippen &amp; Toppen</mat-card-title>
-                      <mat-card-subtitle>{{ formatMonthsLong(plant.trimmingMonths) }}</mat-card-subtitle>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <mat-chip-set aria-label="Knipmaanden">
-                        @for (m of plant.trimmingMonths; track m) {
-                          <mat-chip>{{ monthName(m) }}</mat-chip>
-                        }
-                      </mat-chip-set>
-                    </mat-card-content>
-                  </mat-card>
-
-                  <mat-card appearance="outlined">
-                    <mat-card-header>
-                      <mat-card-title>Bemesten</mat-card-title>
-                      <mat-card-subtitle>
-                        {{ formatMonthsLong(plant.fertilizingMonths) }}
-                      </mat-card-subtitle>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <mat-chip-set aria-label="Bemestingsmaanden">
-                        @for (m of plant.fertilizingMonths; track m) {
-                          <mat-chip>{{ monthName(m) }}</mat-chip>
-                        }
-                      </mat-chip-set>
-                    </mat-card-content>
-                  </mat-card>
-                </div>
-              </mat-card-content>
-
-              <mat-card-actions align="end">
-                <button
-                  mat-button
-                  type="button"
-                  [attr.aria-label]="'Verwijder ' + plant.name + ' uit spreadsheet'"
-                  (click)="service.removePlant(plant.rowNumber)"
-                >
-                  <span>Plant verwijderen</span>
-                </button>
-                <button
-                  matButton="tonal"
-                  type="button"
-                  [disabled]="service.enriching()"
-                  (click)="service.enrichPlants(true)"
-                >
-                  <span>Schema vernieuwen</span>
-                </button>
-              </mat-card-actions>
-            </mat-card>
-          }
-        </div>
-      </div>
-    </mat-tab>
   </mat-tab-group>
 </main>
+
+<!-- Plant Details Dialog Template -->
+<ng-template #plantDetailDialogTpl>
+  @if (service.selectedPlant(); as plant) {
+    <h2 mat-dialog-title>{{ plant.name }}</h2>
+
+    <mat-dialog-content class="plant-dialog-content">
+      <p class="plant-dialog-subtitle">
+        {{ plant.species || 'Soort nog te verrijken' }}
+        @if (plant.location) {
+          &bull; {{ plant.location }}
+        }
+        &bull; Spreadsheet rij #{{ plant.rowNumber }}
+      </p>
+
+      <p class="care-notes-copy">
+        {{
+          plant.careNotes ||
+            'Klik op "Schema vernieuwen" om automatisch het schema voor water geven, snoeien, knippen en bemesten voor deze plant te bepalen.'
+        }}
+      </p>
+
+      <div class="care-grid">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Water geven</mat-card-title>
+            <mat-card-subtitle>Seizoensfrequentie</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              Zomer (apr–sep):
+              {{
+                plant.wateringDaysSummer
+                  ? 'Elke ' + plant.wateringDaysSummer + ' dagen'
+                  : 'Nog niet ingesteld'
+              }}
+            </p>
+            <p>
+              Winter (okt–mrt):
+              {{
+                plant.wateringDaysWinter
+                  ? 'Elke ' + plant.wateringDaysWinter + ' dagen'
+                  : 'Natuurlijke neerslag'
+              }}
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Hoofdsnoei</mat-card-title>
+            <mat-card-subtitle>{{ formatMonthsLong(plant.pruningMonths) }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-chip-set aria-label="Snoeimaanden">
+              @for (m of plant.pruningMonths; track m) {
+                <mat-chip>{{ monthName(m) }}</mat-chip>
+              }
+            </mat-chip-set>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Knippen &amp; Toppen</mat-card-title>
+            <mat-card-subtitle>{{ formatMonthsLong(plant.trimmingMonths) }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-chip-set aria-label="Knipmaanden">
+              @for (m of plant.trimmingMonths; track m) {
+                <mat-chip>{{ monthName(m) }}</mat-chip>
+              }
+            </mat-chip-set>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Bemesten</mat-card-title>
+            <mat-card-subtitle>{{ formatMonthsLong(plant.fertilizingMonths) }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-chip-set aria-label="Bemestingsmaanden">
+              @for (m of plant.fertilizingMonths; track m) {
+                <mat-chip>{{ monthName(m) }}</mat-chip>
+              }
+            </mat-chip-set>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button
+        mat-button
+        type="button"
+        (click)="removeSelectedPlantAndClose(plant.rowNumber)"
+      >
+        Plant verwijderen
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="service.enriching()"
+        (click)="service.enrichPlants(true)"
+      >
+        Schema vernieuwen
+      </button>
+      <button mat-flat-button color="primary" type="button" mat-dialog-close>
+        Sluiten
+      </button>
+    </mat-dialog-actions>
+  }
+</ng-template>

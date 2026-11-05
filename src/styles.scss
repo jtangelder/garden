@@ -103,23 +103,11 @@ a {
   }
 }
 
-.app-sidenav-container {
-  width: 100dvw;
-  height: 100dvh;
-  background: var(--mat-sys-surface);
-}
-
-.app-sidenav {
-  width: 280px;
-  max-width: 85dvw;
-  background: var(--mat-sys-surface-container-low);
-  border-right: 1px solid var(--mat-sys-outline-variant);
-}
-
-.app-sidenav-content {
+garden-root {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  width: 100dvw;
+  height: 100dvh;
   overflow: hidden;
   background: var(--mat-sys-surface);
 }
