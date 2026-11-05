@@ -1,0 +1,92 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.top-toolbar {
+  gap: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.toolbar-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-tabs {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tab-scroll-pane {
+  height: calc(100dvh - 116px);
+  overflow: auto;
+  padding: 16px 20px 32px;
+  box-sizing: border-box;
+}
+
+.schedule-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.horizon-field {
+  width: 150px;
+}
+
+.garden-table {
+  width: 100%;
+}
+
+.cell-subtext {
+  font-size: 0.78rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.detail-pane {
+  max-width: 960px;
+}
+
+.plant-card-body {
+  padding-top: 12px;
+}
+
+.care-notes-copy {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+}
+
+.care-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}

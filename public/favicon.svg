@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Garden icon">
+  <rect width="64" height="64" rx="16" fill="#132419"/>
+  <path d="M32 52V28" stroke="#6dd58c" stroke-width="4" stroke-linecap="round"/>
+  <path d="M32 34C32 22 44 14 52 14C52 24 44 34 32 34Z" fill="#6dd58c"/>
+  <path d="M32 40C32 28 20 20 12 20C12 30 20 40 32 40Z" fill="#46b96e"/>
+</svg>

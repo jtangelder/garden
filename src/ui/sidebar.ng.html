@@ -1,0 +1,148 @@
+<nav class="sidebar-nav" aria-label="Tuinbronnen en plantenlijst">
+  <mat-toolbar class="sidebar-toolbar">
+    <mat-icon aria-hidden="true">yard</mat-icon>
+    <span class="sidebar-brand">Tuinplanner</span>
+    <span class="toolbar-spacer"></span>
+    @if (isMobile()) {
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Zijbalk sluiten"
+        (click)="closeDrawer.emit()"
+      >
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    }
+  </mat-toolbar>
+
+  <div class="sidebar-selectors">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Google Drive Plantensheet</mat-label>
+      <mat-select
+        [value]="service.config().selectedSpreadsheetId"
+        (selectionChange)="onSpreadsheetChange($event.value)"
+      >
+        @for (sheet of service.spreadsheets(); track sheet.id) {
+          <mat-option [value]="sheet.id">{{ sheet.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Doel Google Agenda</mat-label>
+      <mat-select
+        [value]="service.config().selectedCalendarId"
+        (selectionChange)="onCalendarChange($event.value)"
+      >
+        @for (cal of service.calendars(); track cal.id) {
+          <mat-option [value]="cal.id">{{ cal.summary }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="sidebar-list-wrapper">
+    <mat-nav-list aria-label="Planten in spreadsheet">
+      @for (plant of service.plants(); track plant.rowNumber) {
+        <a
+          mat-list-item
+          [activated]="service.selectedPlant()?.rowNumber === plant.rowNumber"
+          [attr.aria-current]="service.selectedPlant()?.rowNumber === plant.rowNumber ? 'true' : null"
+          (click)="selectPlant(plant.rowNumber)"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">
+            {{ plant.needsEnrichment ? 'pending_actions' : 'local_florist' }}
+          </mat-icon>
+          <span matListItemTitle>{{ plant.name }}</span>
+          <span matListItemLine>
+            {{ plant.location || plant.species || 'Rij ' + plant.rowNumber }}
+          </span>
+        </a>
+      }
+    </mat-nav-list>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="sidebar-actions">
+    <button
+      matButton="tonal"
+      type="button"
+      (click)="openAddPlantDialog()"
+      matTooltip="Voeg een plant toe aan de spreadsheet en genereer het onderhoudsschema"
+    >
+      <mat-icon aria-hidden="true">add</mat-icon>
+      <span>Plant toevoegen</span>
+    </button>
+    <button
+      matButton="tonal"
+      type="button"
+      (click)="service.createTemplateSheet()"
+      matTooltip="Maak een nieuwe voorbeeldsheet aan in je Google Drive"
+    >
+      <mat-icon aria-hidden="true">note_add</mat-icon>
+      <span>Voorbeeldsheet</span>
+    </button>
+    <button
+      matButton="tonal"
+      type="button"
+      (click)="openSettingsDialog()"
+      matTooltip="Google OAuth Client-ID en Gemini API-sleutel instellen"
+    >
+      <mat-icon aria-hidden="true">settings</mat-icon>
+      <span>Instellingen</span>
+    </button>
+  </div>
+</nav>
+
+<ng-template #addPlantDialogTpl>
+  <h2 mat-dialog-title>Plant toevoegen aan spreadsheet</h2>
+  <mat-dialog-content>
+    <form [formGroup]="addPlantForm" class="dialog-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Plantnaam</mat-label>
+        <input
+          matInput
+          type="text"
+          formControlName="name"
+          placeholder="bijv. Blauwe Regen"
+          required
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Soort / Variëteit (Optioneel)</mat-label>
+        <input
+          matInput
+          type="text"
+          formControlName="species"
+          placeholder="bijv. Wisteria sinensis"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Locatie in de tuin (Optioneel)</mat-label>
+        <input
+          matInput
+          type="text"
+          formControlName="location"
+          placeholder="bijv. Pergola zuidzijde"
+        />
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Annuleren</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="addPlantForm.invalid"
+      [mat-dialog-close]="'add'"
+    >
+      Toevoegen &amp; Schema bepalen
+    </button>
+  </mat-dialog-actions>
+</ng-template>

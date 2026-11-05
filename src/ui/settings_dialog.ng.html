@@ -1,0 +1,94 @@
+<h2 mat-dialog-title>Google Cloud &amp; Gemini Instellingen</h2>
+
+<mat-dialog-content>
+  <p class="settings-intro">
+    Deze app draait volledig in je browser en maakt rechtstreeks verbinding met je Google Drive, Spreadsheets en
+    Agenda via het gratis tegoed van de ingelogde gebruiker (€ 0 hostingkosten).
+  </p>
+
+  <form [formGroup]="form" class="settings-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Google OAuth 2.0 Web Client-ID</mat-label>
+      <input
+        matInput
+        type="text"
+        formControlName="clientId"
+        placeholder="1234567890-abcdef.apps.googleusercontent.com"
+        autocomplete="off"
+      />
+      <mat-icon matSuffix aria-hidden="true">key</mat-icon>
+      <mat-hint>Publieke OAuth Web Client-ID uit de Google Cloud Console</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Google AI Studio Gemini API-sleutel (Optioneel)</mat-label>
+      <input
+        matInput
+        type="password"
+        formControlName="geminiApiKey"
+        placeholder="AIzaSy..."
+        autocomplete="off"
+      />
+      <mat-icon matSuffix aria-hidden="true">auto_awesome</mat-icon>
+      <mat-hint>
+        Gebruikt je persoonlijke gratis AI Studio-tegoed voor onbekende planten (valt terug op de ingebouwde plantendatabase indien leeg)
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Planningshorizon voor Agenda</mat-label>
+      <mat-select formControlName="planningHorizonDays">
+        <mat-option [value]="30">Komende 30 dagen (1 maand)</mat-option>
+        <mat-option [value]="90">Komende 90 dagen (3 maanden)</mat-option>
+        <mat-option [value]="180">Komende 180 dagen (6 maanden)</mat-option>
+        <mat-option [value]="365">Komende 365 dagen (1 jaar)</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+
+  <mat-accordion>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>Hoe stel je gratis Google OAuth in (2 minuten)</mat-panel-title>
+      </mat-expansion-panel-header>
+      <ol class="setup-steps">
+        <li>
+          Open de
+          <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer">
+            Google Cloud API Library
+          </a>
+          en schakel de <strong>Google Drive API</strong>, <strong>Google Sheets API</strong> en
+          <strong>Google Calendar API</strong> in (allemaal gratis).
+        </li>
+        <li>
+          Ga naar <strong>APIs &amp; Services &rarr; Credentials &rarr; Create Credentials &rarr; OAuth client ID</strong>
+          (Applicatietype: <strong>Web application</strong>).
+        </li>
+        <li>
+          Voeg <code>https://jorik.dev</code> en <code>http://localhost:4200</code> toe onder
+          <strong>Authorized JavaScript origins</strong>.
+        </li>
+        <li>
+          Plak de gegenereerde <strong>Client-ID</strong> hierboven. Maak optioneel een gratis API-sleutel aan via
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
+          voor automatische AI-plantenkennis.
+        </li>
+      </ol>
+    </mat-expansion-panel>
+  </mat-accordion>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Annuleren</button>
+  <button mat-stroked-button type="button" (click)="onSave()">Instellingen opslaan</button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="!form.value.clientId?.trim() || service.connecting()"
+    (click)="onSaveAndConnect()"
+  >
+    <mat-icon aria-hidden="true">login</mat-icon>
+    <span>Opslaan &amp; Inloggen met Google</span>
+  </button>
+</mat-dialog-actions>

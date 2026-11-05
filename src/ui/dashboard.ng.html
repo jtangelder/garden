@@ -1,0 +1,432 @@
+<header>
+  <mat-toolbar class="top-toolbar">
+    @if (isMobile()) {
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Zijbalk openen"
+        matTooltip="Planten &amp; Bronnen"
+        (click)="toggleSidebar.emit()"
+      >
+        <mat-icon aria-hidden="true">menu</mat-icon>
+      </button>
+    }
+
+    <h1 class="toolbar-title">{{ service.sheetTitle() }}</h1>
+
+    <mat-chip-set aria-label="Verbindingsstatus">
+      <mat-chip>
+        <mat-icon matChipAvatar aria-hidden="true">
+          {{ service.isDemo() ? 'science' : 'cloud_done' }}
+        </mat-icon>
+        {{ service.isDemo() ? 'Demo-modus' : 'Google Verbonden' }}
+      </mat-chip>
+    </mat-chip-set>
+
+    <span class="toolbar-spacer"></span>
+
+    <div class="toolbar-actions">
+      @if (!isMobile()) {
+        <button
+          matButton="tonal"
+          type="button"
+          [disabled]="service.enriching()"
+          [matBadge]="service.unenrichedCount() || null"
+          matBadgeColor="accent"
+          matTooltip="Vul ontbrekende verzorgingsschema's automatisch aan en sla ze op in Google Spreadsheets"
+          (click)="service.enrichPlants(service.unenrichedCount() === 0)"
+        >
+          <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+          <span>
+            {{ service.unenrichedCount() > 0 ? 'Verrijk Ontbrekende' : 'Sheet Herberekenen' }}
+          </span>
+        </button>
+      }
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="service.syncingCalendar() || service.pendingSyncCount() === 0"
+        [matBadge]="service.pendingSyncCount() || null"
+        matTooltip="Synchroniseer nieuwe en gewijzigde tuintaken met de geselecteerde Google Agenda"
+        (click)="service.syncToCalendar()"
+      >
+        <mat-icon aria-hidden="true">event_repeat</mat-icon>
+        <span>{{ isMobile() ? 'Sync' : 'Sync naar Agenda' }}</span>
+      </button>
+
+      @if (service.isDemo()) {
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="service.connecting()"
+          matTooltip="Log in met je Google-account om Drive en Agenda te koppelen"
+          (click)="onConnectClick()"
+        >
+          <mat-icon aria-hidden="true">login</mat-icon>
+          <span>{{ isMobile() ? 'Inloggen' : 'Koppel Google' }}</span>
+        </button>
+      } @else {
+        <button
+          mat-icon-button
+          type="button"
+          aria-label="Google-account ontkoppelen"
+          matTooltip="Google-account ontkoppelen"
+          (click)="service.disconnect()"
+        >
+          <mat-icon aria-hidden="true">logout</mat-icon>
+        </button>
+      }
+
+      <button
+        mat-icon-button
+        type="button"
+        [matMenuTriggerFor]="moreMenu"
+        aria-label="Meer tuinacties"
+      >
+        <mat-icon aria-hidden="true">more_vert</mat-icon>
+      </button>
+      <mat-menu #moreMenu="matMenu">
+        <button mat-menu-item type="button" (click)="service.enrichPlants(true)">
+          <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+          <span>Alle planten in sheet opnieuw verrijken</span>
+        </button>
+        <button mat-menu-item type="button" (click)="service.createDedicatedCalendar()">
+          <mat-icon aria-hidden="true">add_circle</mat-icon>
+          <span>Nieuwe "Tuinonderhoud" agenda maken</span>
+        </button>
+        <button mat-menu-item type="button" (click)="openSettingsDialog()">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+          <span>Google OAuth &amp; Gemini Instellingen</span>
+        </button>
+        <button mat-menu-item type="button" (click)="openAboutDialog()">
+          <mat-icon aria-hidden="true">help_outline</mat-icon>
+          <span>Over Tuinonderhoud Planner</span>
+        </button>
+      </mat-menu>
+    </div>
+  </mat-toolbar>
+
+  @if (service.loadingSheet() || service.enriching() || service.syncingCalendar()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Bezig met synchroniseren"></mat-progress-bar>
+  }
+</header>
+
+<main class="dashboard-main">
+  <mat-tab-group class="dashboard-tabs" animationDuration="150ms">
+    <!-- TAB 1: Onderhoudsschema & Agenda Sync -->
+    <mat-tab [label]="'Onderhoudsschema (' + service.filteredTasks().length + ')'">
+      <div class="tab-scroll-pane">
+        <div class="schedule-controls-bar">
+          <mat-chip-listbox
+            aria-label="Filter taken op onderhoudstype"
+            [value]="service.selectedActionFilter()"
+            (change)="onFilterChange($event.value)"
+          >
+            <mat-chip-option value="all">Alle taken</mat-chip-option>
+            <mat-chip-option value="water">
+              <mat-icon matChipAvatar aria-hidden="true">water_drop</mat-icon>
+              Water geven
+            </mat-chip-option>
+            <mat-chip-option value="prune">
+              <mat-icon matChipAvatar aria-hidden="true">content_cut</mat-icon>
+              Snoeien
+            </mat-chip-option>
+            <mat-chip-option value="trim">
+              <mat-icon matChipAvatar aria-hidden="true">carpenter</mat-icon>
+              Knippen
+            </mat-chip-option>
+            <mat-chip-option value="fertilize">
+              <mat-icon matChipAvatar aria-hidden="true">compost</mat-icon>
+              Bemesten
+            </mat-chip-option>
+          </mat-chip-listbox>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="horizon-field">
+            <mat-label>Periode</mat-label>
+            <mat-select
+              [value]="service.config().planningHorizonDays"
+              (selectionChange)="onHorizonChange($event.value)"
+            >
+              <mat-option [value]="30">30 dagen</mat-option>
+              <mat-option [value]="90">90 dagen</mat-option>
+              <mat-option [value]="180">180 dagen</mat-option>
+              <mat-option [value]="365">365 dagen</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <table
+          mat-table
+          [dataSource]="service.filteredTasks()"
+          class="mat-elevation-z1 garden-table"
+        >
+          <caption class="visually-hidden">
+            Gepland tuinonderhoud en synchronisatiestatus voor Google Agenda
+          </caption>
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef scope="col">Datum</th>
+            <td mat-cell *matCellDef="let task">
+              <strong>{{ task.date }}</strong>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef scope="col">Taaktype</th>
+            <td mat-cell *matCellDef="let task">
+              <mat-chip-set>
+                <mat-chip>
+                  <mat-icon matChipAvatar aria-hidden="true">{{ actionIcon(task.action) }}</mat-icon>
+                  {{ actionLabel(task.action) }}
+                </mat-chip>
+              </mat-chip-set>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="plants">
+            <th mat-header-cell *matHeaderCellDef scope="col">Planten</th>
+            <td mat-cell *matCellDef="let task">{{ task.plantNames.join(', ') }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="locations">
+            <th mat-header-cell *matHeaderCellDef scope="col">Locaties in tuin</th>
+            <td mat-cell *matCellDef="let task">{{ task.locations.join(', ') || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="syncStatus">
+            <th mat-header-cell *matHeaderCellDef scope="col">Agendastatus</th>
+            <td mat-cell *matCellDef="let task">
+              <mat-chip-set>
+                <mat-chip [highlighted]="task.syncStatus !== 'synced'">
+                  <mat-icon matChipAvatar aria-hidden="true">
+                    {{ task.syncStatus === 'synced' ? 'check_circle' : 'schedule_send' }}
+                  </mat-icon>
+                  {{
+                    task.syncStatus === 'synced'
+                      ? 'Gesynchroniseerd'
+                      : task.syncStatus === 'update'
+                        ? 'Update nodig'
+                        : 'Nog synchroniseren'
+                  }}
+                </mat-chip>
+              </mat-chip-set>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="scheduleColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: scheduleColumns"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- TAB 2: Planten in Google Spreadsheet -->
+    <mat-tab [label]="'Google Sheet Planten (' + service.plants().length + ')'">
+      <div class="tab-scroll-pane">
+        <table mat-table [dataSource]="service.plants()" class="mat-elevation-z1 garden-table">
+          <caption class="visually-hidden">
+            Planten geladen uit Google Spreadsheets met schema voor water geven, snoeien, knippen en bemesten
+          </caption>
+
+          <ng-container matColumnDef="rowNumber">
+            <th mat-header-cell *matHeaderCellDef scope="col">Rij</th>
+            <td mat-cell *matCellDef="let plant">#{{ plant.rowNumber }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef scope="col">Plantnaam</th>
+            <td mat-cell *matCellDef="let plant">
+              <strong>{{ plant.name }}</strong>
+              @if (plant.species) {
+                <div class="cell-subtext">{{ plant.species }}</div>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="location">
+            <th mat-header-cell *matHeaderCellDef scope="col">Locatie</th>
+            <td mat-cell *matCellDef="let plant">{{ plant.location || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="watering">
+            <th mat-header-cell *matHeaderCellDef scope="col">Water (Zomer / Winter)</th>
+            <td mat-cell *matCellDef="let plant">
+              @if (plant.wateringDaysSummer !== null) {
+                Elke {{ plant.wateringDaysSummer }}d /
+                {{ plant.wateringDaysWinter ? plant.wateringDaysWinter + 'd' : 'Alleen regen' }}
+              } @else {
+                <mat-chip-set>
+                  <mat-chip highlighted>Nog verrijken</mat-chip>
+                </mat-chip-set>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="pruning">
+            <th mat-header-cell *matHeaderCellDef scope="col">Snoeimaanden</th>
+            <td mat-cell *matCellDef="let plant">{{ formatMonths(plant.pruningMonths) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="trimming">
+            <th mat-header-cell *matHeaderCellDef scope="col">Knipmaanden</th>
+            <td mat-cell *matCellDef="let plant">{{ formatMonths(plant.trimmingMonths) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fertilizing">
+            <th mat-header-cell *matHeaderCellDef scope="col">Bemestingsmaanden</th>
+            <td mat-cell *matCellDef="let plant">{{ formatMonths(plant.fertilizingMonths) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="careNotes">
+            <th mat-header-cell *matHeaderCellDef scope="col">Verzorgingsinstructies</th>
+            <td mat-cell *matCellDef="let plant">{{ plant.careNotes || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef scope="col">Acties</th>
+            <td mat-cell *matCellDef="let plant">
+              <button
+                mat-icon-button
+                type="button"
+                [attr.aria-label]="'Verwijder ' + plant.name"
+                matTooltip="Verwijder plant uit spreadsheet"
+                (click)="service.removePlant(plant.rowNumber)"
+              >
+                <mat-icon aria-hidden="true">delete_outline</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="sheetColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: sheetColumns"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- TAB 3: Geselecteerde Plant Details -->
+    <mat-tab label="Plantdetails &amp; Verzorging">
+      <div class="tab-scroll-pane detail-pane">
+        @if (service.selectedPlant(); as plant) {
+          <mat-card appearance="outlined" class="plant-detail-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar aria-hidden="true">local_florist</mat-icon>
+              <mat-card-title>{{ plant.name }}</mat-card-title>
+              <mat-card-subtitle>
+                {{ plant.species || 'Soort nog te verrijken' }}
+                @if (plant.location) {
+                  &bull; {{ plant.location }}
+                }
+                &bull; Spreadsheet rij #{{ plant.rowNumber }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content class="plant-card-body">
+              <p class="care-notes-copy">
+                {{
+                  plant.careNotes ||
+                    'Klik op "Verrijk Ontbrekende" om automatisch het schema voor water geven, snoeien, knippen en bemesten voor deze plant te bepalen.'
+                }}
+              </p>
+
+              <div class="care-grid">
+                <mat-card appearance="outlined">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar aria-hidden="true">water_drop</mat-icon>
+                    <mat-card-title>Water geven</mat-card-title>
+                    <mat-card-subtitle>Frequentie per seizoen</mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <p>
+                      <strong>Zomer (apr–sep):</strong>
+                      {{
+                        plant.wateringDaysSummer
+                          ? 'Elke ' + plant.wateringDaysSummer + ' dagen'
+                          : 'Nog niet ingesteld'
+                      }}
+                    </p>
+                    <p>
+                      <strong>Winter (okt–mrt):</strong>
+                      {{
+                        plant.wateringDaysWinter
+                          ? 'Elke ' + plant.wateringDaysWinter + ' dagen'
+                          : 'Natuurlijke neerslag / winterrust'
+                      }}
+                    </p>
+                  </mat-card-content>
+                </mat-card>
+
+                <mat-card appearance="outlined">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar aria-hidden="true">content_cut</mat-icon>
+                    <mat-card-title>Hoofdsnoei &amp; Vormsnoei</mat-card-title>
+                    <mat-card-subtitle>{{ formatMonthsLong(plant.pruningMonths) }}</mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <mat-chip-set aria-label="Snoeimaanden">
+                      @for (m of plant.pruningMonths; track m) {
+                        <mat-chip>{{ monthName(m) }}</mat-chip>
+                      }
+                    </mat-chip-set>
+                  </mat-card-content>
+                </mat-card>
+
+                <mat-card appearance="outlined">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar aria-hidden="true">carpenter</mat-icon>
+                    <mat-card-title>Knippen &amp; Uitgebloeide bloemen</mat-card-title>
+                    <mat-card-subtitle>{{ formatMonthsLong(plant.trimmingMonths) }}</mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <mat-chip-set aria-label="Knipmaanden">
+                      @for (m of plant.trimmingMonths; track m) {
+                        <mat-chip>{{ monthName(m) }}</mat-chip>
+                      }
+                    </mat-chip-set>
+                  </mat-card-content>
+                </mat-card>
+
+                <mat-card appearance="outlined">
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar aria-hidden="true">compost</mat-icon>
+                    <mat-card-title>Bemesten &amp; Voeding</mat-card-title>
+                    <mat-card-subtitle>{{ formatMonthsLong(plant.fertilizingMonths) }}</mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <mat-chip-set aria-label="Bemestingsmaanden">
+                      @for (m of plant.fertilizingMonths; track m) {
+                        <mat-chip>{{ monthName(m) }}</mat-chip>
+                      }
+                    </mat-chip-set>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+            </mat-card-content>
+
+            <mat-card-actions align="end">
+              <button
+                mat-button
+                type="button"
+                [attr.aria-label]="'Verwijder ' + plant.name + ' uit spreadsheet'"
+                (click)="service.removePlant(plant.rowNumber)"
+              >
+                <mat-icon aria-hidden="true">delete_outline</mat-icon>
+                <span>Plant verwijderen</span>
+              </button>
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                [disabled]="service.enriching()"
+                (click)="service.enrichPlants(true)"
+              >
+                <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+                <span>Schema vernieuwen</span>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</main>
