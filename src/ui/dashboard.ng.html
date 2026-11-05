@@ -170,7 +170,16 @@
 
               <ng-container matColumnDef="plants">
                 <th mat-header-cell *matHeaderCellDef scope="col">Planten</th>
-                <td mat-cell *matCellDef="let task">{{ task.plantNames.join(', ') }}</td>
+                <td mat-cell *matCellDef="let task">
+                  @for (plantName of task.plantNames; track plantName; let isLast = $last) {
+                    <button
+                      type="button"
+                      class="plant-link-button"
+                      [attr.aria-label]="'Bekijk verzorgingsdetails van ' + plantName"
+                      (click)="openPlantDetailByName(plantName)"
+                    >{{ plantName }}</button>@if (!isLast) {<span>, </span>}
+                  }
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="locations">
@@ -241,7 +250,14 @@
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef scope="col">Plant</th>
                 <td mat-cell *matCellDef="let plant">
-                  <div class="plant-name-primary">{{ plant.name }}</div>
+                  <div>
+                    <button
+                      type="button"
+                      class="plant-link-button plant-name-primary"
+                      [attr.aria-label]="'Bekijk verzorgingsdetails van ' + plant.name"
+                      (click)="$event.stopPropagation(); openPlantDetailDialog(plant)"
+                    >{{ plant.name }}</button>
+                  </div>
                   @if (plant.species) {
                     <div class="cell-subtext">{{ plant.species }}</div>
                   }

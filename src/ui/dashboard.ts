@@ -132,6 +132,14 @@ export class DashboardComponent {
     });
   }
 
+  protected openPlantDetailByName(plantName: string): void {
+    const normalized = plantName.trim().toLowerCase();
+    const match = this.service.plants().find(p => p.name.trim().toLowerCase() === normalized);
+    if (match) {
+      this.openPlantDetailDialog(match);
+    }
+  }
+
   protected removeSelectedPlantAndClose(rowNumber: number): void {
     this.dialog.closeAll();
     void this.service.removePlant(rowNumber);
