@@ -1,11 +1,11 @@
 @use '@angular/material' as mat;
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   @include mat.theme(
     (
       color: (
-        theme-type: dark,
+        theme-type: light,
         primary: mat.$green-palette,
         tertiary: mat.$cyan-palette,
       ),
@@ -13,6 +13,43 @@ html {
       density: 0,
     )
   );
+
+  /* Lush Material Design Green surface palette with near-white typography */
+  --mat-sys-background: #2f8538;
+  --mat-sys-surface: #2f8538;
+  --mat-sys-surface-dim: #266f2e;
+  --mat-sys-surface-bright: #43a047;
+  --mat-sys-surface-container-lowest: #23682b;
+  --mat-sys-surface-container-low: #287530;
+  --mat-sys-surface-container: #348e3d;
+  --mat-sys-surface-container-high: #3c9845;
+  --mat-sys-surface-container-highest: #43a047;
+  --mat-sys-surface-variant: #3c9845;
+
+  --mat-sys-on-background: #f7fdf8;
+  --mat-sys-on-surface: #f7fdf8;
+  --mat-sys-on-surface-variant: #e0f5e2;
+
+  --mat-sys-primary: #f7fdf8;
+  --mat-sys-on-primary: #1b5e20;
+  --mat-sys-primary-container: #1f6326;
+  --mat-sys-on-primary-container: #f7fdf8;
+
+  --mat-sys-secondary: #d7f3dc;
+  --mat-sys-on-secondary: #144918;
+  --mat-sys-secondary-container: #1f6326;
+  --mat-sys-on-secondary-container: #f7fdf8;
+
+  --mat-sys-tertiary: #e8f5e9;
+  --mat-sys-on-tertiary: #0d3b10;
+  --mat-sys-tertiary-container: #1b5e20;
+  --mat-sys-on-tertiary-container: #f7fdf8;
+
+  --mat-sys-outline: #b9e6be;
+  --mat-sys-outline-variant: rgba(247, 253, 248, 0.28);
+
+  --mat-sys-inverse-surface: #f7fdf8;
+  --mat-sys-inverse-on-surface: #1b5e20;
 }
 
 :root {
@@ -23,23 +60,30 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-background);
   color: var(--mat-sys-on-surface);
   font-family: var(--font-sans);
   height: 100dvh;
   overflow: hidden;
 }
 
+a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
 .app-sidenav-container {
   width: 100dvw;
   height: 100dvh;
-  background: var(--mat-sys-surface);
+  background: var(--mat-sys-background);
+  color: var(--mat-sys-on-surface);
 }
 
 .app-sidenav {
   width: 340px;
   max-width: 88dvw;
   background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
   border-right: 1px solid var(--mat-sys-outline-variant);
 }
 
@@ -48,7 +92,8 @@ body {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: var(--mat-sys-surface);
+  background: var(--mat-sys-background);
+  color: var(--mat-sys-on-surface);
 }
 
 .visually-hidden:where(:not(:focus-within, :active)) {
