@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addOneDayIso, generateGardenSchedule, isWarmSeason } from './scheduler';
+import { addOneDayIso, generateGardenSchedule, groupTasksByMonth, isWarmSeason } from './scheduler';
 import { type PlantRecord } from './models';
 
 describe('scheduler', () => {
@@ -81,5 +81,36 @@ describe('scheduler', () => {
     const novTrim = tasks.find(t => t.action === 'trim');
     expect(novTrim?.date).toBe('2026-11-14');
     expect(novTrim?.syncStatus).toBe('new');
+  });
+
+  it('includes past month catch-up tasks and groups schedule by month', () => {
+    const plantsWithOctober: PlantRecord[] = [
+      ...samplePlants,
+      {
+        rowNumber: 4,
+        name: 'Buxushaag',
+        species: 'Buxus sempervirens',
+        location: 'Oprit',
+        wateringDaysSummer: 7,
+        wateringDaysWinter: 0,
+        pruningMonths: [],
+        trimmingMonths: [],
+        fertilizingMonths: [10],
+        careNotes: 'Najaarsmest in oktober.',
+        lastEnriched: '2026-11-01',
+        needsEnrichment: false,
+      },
+    ];
+
+    const tasks = generateGardenSchedule(plantsWithOctober, '2026-11-05', 30, [], true);
+    const groups = groupTasksByMonth(tasks, '2026-11-05', true);
+
+    expect(groups[0]?.yearMonth).toBe('2026-10');
+    expect(groups[0]?.isPastMonth).toBe(true);
+    expect(groups[0]?.label).toBe('Oktober 2026');
+    expect(groups[0]?.tasks.some(t => t.action === 'fertilize' && t.plantNames.includes('Buxushaag'))).toBe(true);
+
+    expect(groups[1]?.yearMonth).toBe('2026-11');
+    expect(groups[1]?.isCurrentMonth).toBe(true);
   });
 });

@@ -24,6 +24,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MONTH_NAMES, type MonthNumber, type PlantRecord, type TaskActionType } from '../lib/models';
+import { groupTasksByMonth, todayIso } from '../lib/scheduler';
 import { formatMonthsCell, formatMonthsFull } from '../lib/sheet_parser';
 import { GardenService } from '../services/garden.service';
 import { PhotoPlantDialogComponent } from './photo_plant_dialog';
@@ -61,6 +62,12 @@ export class DashboardComponent {
   private readonly plantDetailDialogTpl = viewChild<TemplateRef<unknown>>('plantDetailDialogTpl');
 
   protected readonly plantSearchQuery = signal('');
+
+  protected readonly todayDateIso = computed(() => todayIso());
+
+  protected readonly monthGroups = computed(() =>
+    groupTasksByMonth(this.service.filteredTasks(), this.todayDateIso(), true),
+  );
 
   protected readonly filteredPlants = computed(() => {
     const query = this.plantSearchQuery().trim().toLowerCase();

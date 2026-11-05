@@ -94,6 +94,75 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.month-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.month-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.month-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.month-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--mat-sys-on-surface);
+}
+
+.month-badge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+.month-badge-past {
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.month-badge-current {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.month-task-count {
+  margin-left: auto;
+  font-size: 0.76rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.catchup-pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.month-empty-card {
+  padding: 16px 20px;
+  font-size: 0.84rem;
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface-container-lowest);
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: 14px;
+}
+
 .table-surface {
   background: var(--mat-sys-surface-container-lowest);
   border: 1px solid var(--mat-sys-outline-variant);

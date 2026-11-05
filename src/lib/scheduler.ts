@@ -90,11 +90,65 @@ function buildActionTask(
   };
 }
 
+export interface ScheduleMonthGroup {
+  yearMonth: string;
+  year: number;
+  month: MonthNumber;
+  label: string;
+  isPastMonth: boolean;
+  isCurrentMonth: boolean;
+  tasks: GardenTask[];
+}
+
+export function groupTasksByMonth(
+  tasks: readonly GardenTask[],
+  referenceDateIso: string,
+  includePreviousMonth = true,
+): ScheduleMonthGroup[] {
+  const refDate = Temporal.PlainDate.from(referenceDateIso);
+  const currentYm = refDate.toPlainYearMonth();
+  const prevYm = currentYm.subtract({ months: 1 });
+
+  const grouped = new Map<string, GardenTask[]>();
+  if (includePreviousMonth) {
+    grouped.set(prevYm.toString(), []);
+  }
+  grouped.set(currentYm.toString(), []);
+
+  for (const task of tasks) {
+    const ymKey = task.date.slice(0, 7);
+    const list = grouped.get(ymKey);
+    if (list) {
+      list.push(task);
+    } else {
+      grouped.set(ymKey, [task]);
+    }
+  }
+
+  const sortedKeys = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
+
+  return sortedKeys.map(ymKey => {
+    const ym = Temporal.PlainYearMonth.from(ymKey);
+    const monthNum = ym.month as MonthNumber;
+    const cmp = Temporal.PlainYearMonth.compare(ym, currentYm);
+    return {
+      yearMonth: ymKey,
+      year: ym.year,
+      month: monthNum,
+      label: `${MONTH_NAMES[monthNum]} ${ym.year}`,
+      isPastMonth: cmp < 0,
+      isCurrentMonth: cmp === 0,
+      tasks: grouped.get(ymKey) ?? [],
+    };
+  });
+}
+
 export function generateGardenSchedule(
   plants: readonly PlantRecord[],
   startDateIso: string,
   horizonDays: number,
   existingEvents: readonly CalendarEventRecord[] = [],
+  includePreviousMonth = false,
 ): GardenTask[] {
   const activePlants = plants.filter(p => p.name.trim().length > 0);
   if (!activePlants.length || horizonDays <= 0) {
@@ -103,6 +157,7 @@ export function generateGardenSchedule(
 
   const start = Temporal.PlainDate.from(startDateIso);
   const end = start.add({ days: horizonDays });
+  const monthlyStart = includePreviousMonth ? start.subtract({ months: 1 }).with({ day: 1 }) : start;
 
   const existingByTaskId = new Map<string, CalendarEventRecord>();
   for (const ev of existingEvents) {
@@ -113,7 +168,7 @@ export function generateGardenSchedule(
 
   const tasks: GardenTask[] = [];
 
-  // 1. Generate Watering Tasks across the horizon
+  // 1. Generate Watering Tasks across the upcoming horizon
   for (let dayOffset = 0; dayOffset <= horizonDays; dayOffset++) {
     const current = start.add({ days: dayOffset });
     const warm = isWarmSeason(current.month);
@@ -131,11 +186,11 @@ export function generateGardenSchedule(
     }
   }
 
-  // 2. Collect unique Year-Months in [start, end] for Prune, Trim, Fertilize
+  // 2. Collect unique Year-Months in [monthlyStart, end] for Prune, Trim, Fertilize
   const seenYearMonths = new Set<string>();
   const yearMonths: Temporal.PlainYearMonth[] = [];
 
-  let cursor = start;
+  let cursor = monthlyStart;
   while (Temporal.PlainDate.compare(cursor, end) <= 0) {
     const ym = cursor.toPlainYearMonth();
     const key = ym.toString();
@@ -182,7 +237,12 @@ export function generateGardenSchedule(
       if (!bucketPlants.length) continue;
 
       let targetDate = findNthSaturdayOfMonth(ym.year, ym.month, monthlyActionNthSaturday[action]);
-      if (ym.year === start.year && ym.month === start.month && Temporal.PlainDate.compare(targetDate, start) < 0) {
+      if (
+        !includePreviousMonth &&
+        ym.year === start.year &&
+        ym.month === start.month &&
+        Temporal.PlainDate.compare(targetDate, start) < 0
+      ) {
         const daysToNextSaturday = (6 - start.dayOfWeek + 7) % 7;
         const candidate = start.add({ days: daysToNextSaturday });
         if (candidate.month === start.month) {
@@ -190,7 +250,10 @@ export function generateGardenSchedule(
         }
       }
 
-      if (Temporal.PlainDate.compare(targetDate, start) >= 0 && Temporal.PlainDate.compare(targetDate, end) <= 0) {
+      if (
+        Temporal.PlainDate.compare(targetDate, monthlyStart) >= 0 &&
+        Temporal.PlainDate.compare(targetDate, end) <= 0
+      ) {
         tasks.push(buildActionTask(action, targetDate, bucketPlants, existingByTaskId));
       }
     }

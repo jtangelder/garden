@@ -105,7 +105,13 @@ export class GardenService {
   readonly unenrichedCount = computed(() => this.plants().filter(p => p.needsEnrichment).length);
 
   readonly tasks = computed<GardenTask[]>(() =>
-    generateGardenSchedule(this.plants(), todayIso(), this.config().planningHorizonDays, this.existingCalendarEvents()),
+    generateGardenSchedule(
+      this.plants(),
+      todayIso(),
+      this.config().planningHorizonDays,
+      this.existingCalendarEvents(),
+      true,
+    ),
   );
 
   readonly filteredTasks = computed<GardenTask[]>(() => {
@@ -544,10 +550,10 @@ export class GardenService {
   }
 
   private async loadCalendarEvents(calendarId: string): Promise<void> {
-    const startIso = todayIso();
-    const endIso = addOneDayIso(startIso);
+    const today = todayIso();
     const tasks = this.tasks();
-    const horizonEndIso = tasks.length > 0 ? tasks[tasks.length - 1].date : endIso;
+    const startIso = tasks.length > 0 && tasks[0].date < today ? tasks[0].date : today;
+    const horizonEndIso = tasks.length > 0 ? tasks[tasks.length - 1].date : addOneDayIso(today);
 
     const events = await listGardenCalendarEvents(this.accessToken, calendarId, startIso, horizonEndIso);
     this.existingCalendarEvents.set(events);
