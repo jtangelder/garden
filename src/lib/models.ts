@@ -42,6 +42,13 @@ export interface PlantCareSchedule {
   careNotes: string;
 }
 
+export interface IdentifiedPlantResult {
+  name: string;
+  confidence: 'hoog' | 'gemiddeld' | 'laag';
+  source: 'gemini' | 'builtin';
+  schedule: PlantCareSchedule;
+}
+
 export interface PlantRecord {
   rowNumber: number;
   name: string;

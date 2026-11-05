@@ -68,13 +68,14 @@
 
   <div class="sidebar-actions">
     <button
-      matButton="tonal"
+      mat-flat-button
+      color="primary"
       type="button"
       (click)="openAddPlantDialog()"
-      matTooltip="Voeg een plant toe aan de spreadsheet en genereer het onderhoudsschema"
+      matTooltip="Maak een foto van een plant zodat AI deze herkent en toevoegt aan je spreadsheet"
     >
-      <mat-icon aria-hidden="true">add</mat-icon>
-      <span>Plant toevoegen</span>
+      <mat-icon aria-hidden="true">add_a_photo</mat-icon>
+      <span>Foto van plant toevoegen</span>
     </button>
     <button
       matButton="tonal"
@@ -96,53 +97,3 @@
     </button>
   </div>
 </nav>
-
-<ng-template #addPlantDialogTpl>
-  <h2 mat-dialog-title>Plant toevoegen aan spreadsheet</h2>
-  <mat-dialog-content>
-    <form [formGroup]="addPlantForm" class="dialog-form">
-      <mat-form-field appearance="outline">
-        <mat-label>Plantnaam</mat-label>
-        <input
-          matInput
-          type="text"
-          formControlName="name"
-          placeholder="bijv. Blauwe Regen"
-          required
-        />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Soort / Variëteit (Optioneel)</mat-label>
-        <input
-          matInput
-          type="text"
-          formControlName="species"
-          placeholder="bijv. Wisteria sinensis"
-        />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Locatie in de tuin (Optioneel)</mat-label>
-        <input
-          matInput
-          type="text"
-          formControlName="location"
-          placeholder="bijv. Pergola zuidzijde"
-        />
-      </mat-form-field>
-    </form>
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button type="button" mat-dialog-close>Annuleren</button>
-    <button
-      mat-flat-button
-      color="primary"
-      type="button"
-      [disabled]="addPlantForm.invalid"
-      [mat-dialog-close]="'add'"
-    >
-      Toevoegen &amp; Schema bepalen
-    </button>
-  </mat-dialog-actions>
-</ng-template>

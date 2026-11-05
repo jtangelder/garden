@@ -1,0 +1,202 @@
+<h2 mat-dialog-title>Plant toevoegen via Foto (AI)</h2>
+
+<mat-dialog-content>
+  <mat-tab-group
+    [selectedIndex]="activeTabIndex()"
+    (selectedIndexChange)="activeTabIndex.set($event)"
+    animationDuration="150ms"
+  >
+    <!-- TAB 1: Foto maken of kiezen (Primary Flow) -->
+    <mat-tab label="Foto herkennen (AI)">
+      <div class="photo-tab-body">
+        <p class="photo-intro">
+          Maak een foto van elke plant in je tuin of kies één of meerdere foto's. Gemini AI herkent het type plant,
+          bepaalt het volledige snoei-, knip-, water- en bemestingsschema en slaat alles op in je Google Spreadsheet.
+        </p>
+
+        <div class="capture-buttons">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="cameraInput.click()"
+          >
+            <mat-icon aria-hidden="true">photo_camera</mat-icon>
+            <span>Maak foto met camera</span>
+          </button>
+
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="galleryInput.click()"
+          >
+            <mat-icon aria-hidden="true">photo_library</mat-icon>
+            <span>Kies foto('s) van apparaat</span>
+          </button>
+
+          <input
+            #cameraInput
+            type="file"
+            accept="image/*"
+            capture="environment"
+            (change)="onFilesSelected($event)"
+            hidden
+          />
+          <input
+            #galleryInput
+            type="file"
+            accept="image/*"
+            multiple
+            (change)="onFilesSelected($event)"
+            hidden
+          />
+        </div>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Locatie in de tuin voor deze foto('s) (Optioneel)</mat-label>
+          <input
+            matInput
+            type="text"
+            [formControl]="locationControl"
+            placeholder="bijv. Voortuin border, Zonnig terras, Achtertuin"
+          />
+          <mat-icon matSuffix aria-hidden="true">place</mat-icon>
+        </mat-form-field>
+
+        @if (isAnalyzingAny() || saving()) {
+          <mat-progress-bar
+            mode="indeterminate"
+            aria-label="Plantfoto wordt geanalyseerd door AI"
+          ></mat-progress-bar>
+        }
+
+        @if (scannedItems().length > 0) {
+          <div class="scanned-cards-list">
+            @for (item of scannedItems(); track item.id) {
+              <mat-card appearance="outlined" class="scanned-plant-card">
+                <mat-card-header>
+                  @if (item.dataUrl) {
+                    <img
+                      mat-card-sm-image
+                      [src]="item.dataUrl"
+                      [alt]="'Geselecteerde foto van ' + (item.result?.name || item.fileName)"
+                      class="plant-thumb"
+                    />
+                  }
+                  <mat-card-title>
+                    {{ item.analyzing ? 'Plant wordt herkend...' : item.result?.name || item.fileName }}
+                  </mat-card-title>
+                  <mat-card-subtitle>
+                    @if (item.analyzing) {
+                      Bezig met AI-analyse van {{ item.fileName }}
+                    } @else if (item.result; as res) {
+                      {{ res.schedule.species }}
+                    } @else if (item.error) {
+                      {{ item.error }}
+                    }
+                  </mat-card-subtitle>
+                </mat-card-header>
+
+                @if (item.result; as res) {
+                  <mat-card-content class="scanned-card-content">
+                    <mat-chip-set aria-label="Herkende planteigenschappen">
+                      <mat-chip highlighted>
+                        <mat-icon matChipAvatar aria-hidden="true">verified</mat-icon>
+                        Zekerheid: {{ res.confidence }}
+                      </mat-chip>
+                      <mat-chip>
+                        <mat-icon matChipAvatar aria-hidden="true">water_drop</mat-icon>
+                        Zomer: elke {{ res.schedule.wateringDaysSummer }}d
+                      </mat-chip>
+                      <mat-chip>
+                        <mat-icon matChipAvatar aria-hidden="true">content_cut</mat-icon>
+                        Snoei: {{ formatMonths(res.schedule.pruningMonths) }}
+                      </mat-chip>
+                    </mat-chip-set>
+                    <p class="scanned-care-notes">{{ res.schedule.careNotes }}</p>
+                  </mat-card-content>
+                }
+
+                <mat-card-actions align="end">
+                  <button
+                    mat-button
+                    type="button"
+                    [attr.aria-label]="'Verwijder foto van ' + (item.result?.name || item.fileName)"
+                    (click)="removeScannedItem(item.id)"
+                  >
+                    <mat-icon aria-hidden="true">delete_outline</mat-icon>
+                    <span>Verwijderen</span>
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- TAB 2: Handmatig invoeren (Fallback) -->
+    <mat-tab label="Handmatig typen">
+      <form [formGroup]="manualForm" class="manual-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Plantnaam</mat-label>
+          <input
+            matInput
+            type="text"
+            formControlName="name"
+            placeholder="bijv. Blauwe Regen"
+            required
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Soort / Variëteit (Optioneel)</mat-label>
+          <input
+            matInput
+            type="text"
+            formControlName="species"
+            placeholder="bijv. Wisteria sinensis"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Locatie in de tuin (Optioneel)</mat-label>
+          <input
+            matInput
+            type="text"
+            formControlName="location"
+            placeholder="bijv. Pergola zuidzijde"
+          />
+        </mat-form-field>
+      </form>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Annuleren</button>
+
+  @if (activeTabIndex() === 0) {
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="readyItems().length === 0 || isAnalyzingAny() || saving()"
+      (click)="onSaveScannedPlants()"
+    >
+      <mat-icon aria-hidden="true">save</mat-icon>
+      <span>Opslaan in Sheet ({{ readyItems().length }})</span>
+    </button>
+  } @else {
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="manualForm.invalid || saving()"
+      (click)="onSaveManualPlant()"
+    >
+      <mat-icon aria-hidden="true">add</mat-icon>
+      <span>Toevoegen &amp; Schema bepalen</span>
+    </button>
+  }
+</mat-dialog-actions>

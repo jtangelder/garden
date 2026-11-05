@@ -4,18 +4,21 @@ import {
   createGardenTemplateSpreadsheet,
   enrichPlantsCareSchedules,
   fetchSpreadsheetRows,
+  identifyPlantFromImage,
   listGardenCalendarEvents,
   listUserSpreadsheets,
   listWritableCalendars,
   syncTasksToGoogleCalendar,
   writeSpreadsheetRows,
 } from '../lib/google_api';
+import { compressAndEncodeImageFile, type EncodedPlantImage } from '../lib/image_utils';
 import {
   type CalendarEventRecord,
   type CalendarSummary,
   type DriveSpreadsheet,
   type GardenTask,
   type GoogleConnectionConfig,
+  type IdentifiedPlantResult,
   type PlantRecord,
   type TaskActionType,
 } from '../lib/models';
@@ -72,6 +75,7 @@ export class GardenService {
   readonly connecting = signal(false);
   readonly loadingSheet = signal(false);
   readonly enriching = signal(false);
+  readonly identifyingPhoto = signal(false);
   readonly syncingCalendar = signal(false);
   readonly syncProgress = signal<{ completed: number; total: number } | null>(null);
 
@@ -364,6 +368,54 @@ export class GardenService {
 
     await this.persistPlantsToSheet(updatedList);
     this.notifications.info(`"${finalPlant.name}" toegevoegd met onderhoudsschema.`);
+  }
+
+  async identifyPlantPhoto(file: File): Promise<{ image: EncodedPlantImage; result: IdentifiedPlantResult }> {
+    this.identifyingPhoto.set(true);
+    try {
+      const encoded = await compressAndEncodeImageFile(file);
+      const result = await identifyPlantFromImage(encoded, {
+        geminiApiKey: this.config().geminiApiKey,
+        accessToken: this.accessToken,
+      });
+      return { image: encoded, result };
+    } finally {
+      this.identifyingPhoto.set(false);
+    }
+  }
+
+  async addIdentifiedPlants(items: ReadonlyArray<{ result: IdentifiedPlantResult; location: string }>): Promise<void> {
+    if (!items.length) return;
+
+    const current = this.plants();
+    let nextRow = current.length > 0 ? Math.max(...current.map(p => p.rowNumber)) + 1 : 2;
+    const today = todayIso();
+
+    const added: PlantRecord[] = items.map(item => {
+      const row = nextRow++;
+      return {
+        rowNumber: row,
+        name: item.result.name,
+        species: item.result.schedule.species,
+        location: item.location.trim(),
+        wateringDaysSummer: item.result.schedule.wateringDaysSummer,
+        wateringDaysWinter: item.result.schedule.wateringDaysWinter,
+        pruningMonths: [...item.result.schedule.pruningMonths],
+        trimmingMonths: [...item.result.schedule.trimmingMonths],
+        fertilizingMonths: [...item.result.schedule.fertilizingMonths],
+        careNotes: item.result.schedule.careNotes,
+        lastEnriched: today,
+        needsEnrichment: false,
+      };
+    });
+
+    const updatedList = [...current, ...added];
+    this.plants.set(updatedList);
+    this.selectedPlantRow.set(added[added.length - 1].rowNumber);
+
+    await this.persistPlantsToSheet(updatedList);
+    const names = added.map(p => p.name).join(', ');
+    this.notifications.info(`Fotoherkenning opgeslagen in spreadsheet: ${names}.`);
   }
 
   async removePlant(rowNumber: number): Promise<void> {

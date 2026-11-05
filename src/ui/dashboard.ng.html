@@ -26,6 +26,16 @@
     <span class="toolbar-spacer"></span>
 
     <div class="toolbar-actions">
+      <button
+        matButton="tonal"
+        type="button"
+        matTooltip="Maak of upload een foto van een plant om deze via AI toe te voegen aan je sheet"
+        (click)="openAddPlantPhotoDialog()"
+      >
+        <mat-icon aria-hidden="true">add_a_photo</mat-icon>
+        <span>{{ isMobile() ? 'Foto' : 'Foto toevoegen' }}</span>
+      </button>
+
       @if (!isMobile()) {
         <button
           matButton="tonal"

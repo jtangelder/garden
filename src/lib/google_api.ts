@@ -1,8 +1,10 @@
+import { type EncodedPlantImage, inferPlantHintFromFileName } from './image_utils';
 import {
   type CalendarEventRecord,
   type CalendarSummary,
   type DriveSpreadsheet,
   type GardenTask,
+  type IdentifiedPlantResult,
   type MonthNumber,
   type PlantCareSchedule,
   type PlantRecord,
@@ -413,4 +415,157 @@ export async function enrichPlantsCareSchedules(
   }
 
   return results;
+}
+
+interface GeminiPhotoIdentificationPayload {
+  name: string;
+  species: string;
+  confidence?: string;
+  wateringDaysSummer: number;
+  wateringDaysWinter: number;
+  pruningMonths: number[];
+  trimmingMonths: number[];
+  fertilizingMonths: number[];
+  careNotes: string;
+}
+
+export async function identifyPlantFromImage(
+  image: EncodedPlantImage,
+  auth: { geminiApiKey?: string; accessToken?: string },
+): Promise<IdentifiedPlantResult> {
+  const apiKey = auth.geminiApiKey?.trim();
+  const accessToken = auth.accessToken?.trim();
+
+  if (apiKey || accessToken) {
+    const endpoint = apiKey
+      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`
+      : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+    const prompt = [
+      'Je bent een ervaren hovenier en botanisch expert in Nederland/België.',
+      'Analyseer deze foto en herken welke tuinplant, struik, boom, kruid of bloem erop staat.',
+      'Geef als resultaat:',
+      '- name: de gangbare Nederlandse naam van de plant (bijv. "Boerenhortensia", "Japanse Esdoorn", "Olijfboom")',
+      '- species: de botanische Latijnse naam (bijv. "Hydrangea macrophylla")',
+      '- confidence: betrouwbaarheid van de herkenning ("hoog", "gemiddeld", of "laag")',
+      '- wateringDaysSummer: aantal dagen tussen water geven in warme maanden (apr-sep), bijv. 2 tot 10',
+      '- wateringDaysWinter: aantal dagen tussen water geven in koude maanden (okt-mrt), gebruik 0 als regen/winterrust volstaat',
+      '- pruningMonths: lijst met maandnummers (1=jan .. 12=dec) voor hoofdsnoei/vormsnoei',
+      '- trimmingMonths: lijst met maandnummers (1..12) voor knippen, toppen of uitgebloeide bloemen verwijderen',
+      '- fertilizingMonths: lijst met maandnummers (1..12) voor bemesten/voeden',
+      '- careNotes: beknopte praktische verzorgingsinstructie van 1 zin in het Nederlands',
+    ].join('\n');
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (!apiKey && accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: image.mimeType || 'image/jpeg',
+                  data: image.base64Data,
+                },
+              },
+              { text: prompt },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              name: { type: 'STRING' },
+              species: { type: 'STRING' },
+              confidence: { type: 'STRING' },
+              wateringDaysSummer: { type: 'INTEGER' },
+              wateringDaysWinter: { type: 'INTEGER' },
+              pruningMonths: { type: 'ARRAY', items: { type: 'INTEGER' } },
+              trimmingMonths: { type: 'ARRAY', items: { type: 'INTEGER' } },
+              fertilizingMonths: { type: 'ARRAY', items: { type: 'INTEGER' } },
+              careNotes: { type: 'STRING' },
+            },
+            required: [
+              'name',
+              'species',
+              'confidence',
+              'wateringDaysSummer',
+              'wateringDaysWinter',
+              'pruningMonths',
+              'trimmingMonths',
+              'fertilizingMonths',
+              'careNotes',
+            ],
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      let detail = `${response.status} ${response.statusText}`;
+      try {
+        const errJson = (await response.json()) as GoogleApiErrorPayload;
+        if (errJson.error?.message) {
+          detail = errJson.error.message;
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
+      throw new Error(`Gemini fotoherkenning mislukt: ${detail}`);
+    }
+
+    const payload = (await response.json()) as GeminiCandidateResponse;
+    const rawText = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (rawText) {
+      const parsed = JSON.parse(rawText) as GeminiPhotoIdentificationPayload;
+      const rawConf = (parsed.confidence ?? 'hoog').toLowerCase();
+      const confidence: IdentifiedPlantResult['confidence'] =
+        rawConf === 'laag' ? 'laag' : rawConf === 'gemiddeld' ? 'gemiddeld' : 'hoog';
+
+      return {
+        name: parsed.name || 'Geïdentificeerde Tuinplant',
+        confidence,
+        source: 'gemini',
+        schedule: {
+          species: parsed.species || 'Tuinplant',
+          wateringDaysSummer: Math.max(1, Number(parsed.wateringDaysSummer) || 4),
+          wateringDaysWinter: Math.max(0, Number(parsed.wateringDaysWinter) || 0),
+          pruningMonths: sanitizeMonths(parsed.pruningMonths),
+          trimmingMonths: sanitizeMonths(parsed.trimmingMonths),
+          fertilizingMonths: sanitizeMonths(parsed.fertilizingMonths),
+          careNotes: parsed.careNotes || 'Houd de grond licht vochtig en verwijder dode takken.',
+        },
+      };
+    }
+  }
+
+  // Fallback for Demo Mode when no Gemini API key or Google OAuth session is configured yet
+  const fileHint = inferPlantHintFromFileName(image.fileName);
+  const guessedName = fileHint ? capitalizeWords(fileHint) : 'Blauwe Regen (Demo Fotoherkenning)';
+  const schedule = lookupBuiltInCareSchedule(guessedName);
+
+  return {
+    name: guessedName,
+    confidence: fileHint ? 'gemiddeld' : 'hoog',
+    source: 'builtin',
+    schedule,
+  };
+}
+
+function capitalizeWords(input: string): string {
+  return input
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }

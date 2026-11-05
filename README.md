@@ -16,12 +16,13 @@ Because the app is hosted as a static Single-Page Application (SPA) on GitHub Pa
    - `https://www.googleapis.com/auth/calendar` — List your writable Google Calendars, create a dedicated `Tuinonderhoud` calendar if desired, and sync maintenance tasks.
 3. All requests to the Google Drive, Sheets, and Calendar REST APIs are made directly from the browser with `Authorization: Bearer <access_token>`. These Workspace APIs are **100% free** and consume only the signed-in user's personal per-user rate quota.
 
-### 2. Fetching & Enriching Plant Care Schedules (Using User Credits)
-You only need to enter plant names in Column A (`Plantnaam`) of your Google Sheet (and optionally `Soort / Variëteit` in Column B and `Locatie` in Column C). When a sheet is loaded or when you click **Verrijk Ontbrekende**:
+### 2. Adding Plants by Picture (AI Multimodal Vision) & Enriching Schedules
+The primary way to populate your garden is by **taking or uploading pictures of each plant**:
 
-1. **Gemini 2.5 Flash (User Credits)**: If you provide a free personal **Google AI Studio API Key** (`AIza...`) in **Instellingen** (or via your signed-in OAuth session), the app batches all unenriched plants in a single structured-JSON call to `generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`.
-2. **Built-in Botanical Database Fallback**: If no AI key is configured (or if offline), the app falls back to its built-in Dutch horticultural database (`src/lib/plant_database.ts`) covering common shrubs, perennials, trees, climbers, hedges, herbs, and vegetables.
-3. **Cached in Your Google Sheet**: Once enriched, the app immediately writes the schedule columns (`Watergeven Dagen (Zomer)`, `Watergeven Dagen (Winter)`, `Snoeimaanden`, `Knipmaanden`, `Bemestingsmaanden`, `Verzorgingsinstructies`, `Laatst Verrijkt`) back into your Google Sheet. Future loads read directly from the sheet without spending any AI credits, and you can manually tweak any cell in Google Sheets at any time.
+1. **Snap or Select Photos**: Click **Foto van plant toevoegen** in the sidebar (or **Foto toevoegen** in the top bar). On mobile devices, **Maak foto met camera** opens the rear camera directly (`capture="environment"`), or you can select multiple photos at once from your library.
+2. **Client-Side Compression**: Each photo is resized in the browser to max `1024px` (`JPEG` quality `0.82`) via `src/lib/image_utils.ts` so uploads are fast and token-efficient.
+3. **Gemini 2.5 Flash Multimodal Recognition (User Credits)**: The compressed image is sent to `generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent` using your personal Google AI Studio API Key (`AIza...`) or signed-in OAuth session. Gemini identifies the Dutch plant name, Latin species, recognition confidence (`hoog`, `gemiddeld`, `laag`), and its full Dutch annual care schedule (summer/winter watering intervals, pruning months, trimming months, fertilizing months, and care instructions).
+4. **Saved & Cached in Your Google Sheet**: Clicking **Opslaan in Sheet** appends the newly identified plant(s) and all schedule columns directly into your Google Sheet (`Planten` tab). Future loads read directly from the sheet without spending any AI credits, and you can also manually add or edit rows in Google Sheets at any time.
 
 ### 3. Preview & Idempotent Google Calendar Sync
 - The scheduler (`src/lib/scheduler.ts`) uses `Temporal.PlainDate` to calculate upcoming watering days (based on summer vs. winter intervals) and weekend pruning (1st Saturday of the month), trimming (2nd Saturday), and fertilizing (3rd Saturday) tasks across your chosen horizon (30, 90, 180, or 365 days).

@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MONTH_NAMES, type MonthNumber, type TaskActionType } from '../lib/models';
 import { formatMonthsCell, formatMonthsFull } from '../lib/sheet_parser';
 import { GardenService } from '../services/garden.service';
+import { PhotoPlantDialogComponent } from './photo_plant_dialog';
 import { SettingsDialogComponent } from './settings_dialog';
 import { WelcomeComponent } from './welcome';
 
@@ -113,6 +114,14 @@ export class DashboardComponent {
       return;
     }
     await this.service.connectGoogle();
+  }
+
+  protected openAddPlantPhotoDialog(): void {
+    this.dialog.open(PhotoPlantDialogComponent, {
+      width: '560px',
+      maxWidth: '94dvw',
+      autoFocus: 'first-tabbable',
+    });
   }
 
   protected openSettingsDialog(): void {
