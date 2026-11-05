@@ -1,0 +1,20 @@
+{
+  "name": "Tuinonderhoud Planner",
+  "short_name": "Tuin",
+  "description": "Slimme tuinonderhoudsplanner gekoppeld aan Google Spreadsheets, Drive en Google Agenda.",
+  "theme_color": "#0f1712",
+  "background_color": "#0f1712",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "orientation": "any",
+  "categories": ["lifestyle", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
