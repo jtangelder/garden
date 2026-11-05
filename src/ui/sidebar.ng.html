@@ -1,7 +1,7 @@
-<nav class="sidebar-nav" aria-label="Tuinbronnen en plantenlijst">
+<nav class="sidebar-nav" aria-label="Plantenlijst">
   <mat-toolbar class="sidebar-toolbar">
     <mat-icon aria-hidden="true">yard</mat-icon>
-    <span class="sidebar-brand">Tuinplanner</span>
+    <span class="sidebar-brand">Mijn Planten</span>
     <span class="toolbar-spacer"></span>
     @if (isMobile()) {
       <button
@@ -15,34 +15,6 @@
     }
   </mat-toolbar>
 
-  <div class="sidebar-selectors">
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Google Drive Plantensheet</mat-label>
-      <mat-select
-        [value]="service.config().selectedSpreadsheetId"
-        (selectionChange)="onSpreadsheetChange($event.value)"
-      >
-        @for (sheet of service.spreadsheets(); track sheet.id) {
-          <mat-option [value]="sheet.id">{{ sheet.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Doel Google Agenda</mat-label>
-      <mat-select
-        [value]="service.config().selectedCalendarId"
-        (selectionChange)="onCalendarChange($event.value)"
-      >
-        @for (cal of service.calendars(); track cal.id) {
-          <mat-option [value]="cal.id">{{ cal.summary }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
-
-  <mat-divider></mat-divider>
-
   <div class="sidebar-list-wrapper">
     <mat-nav-list aria-label="Planten in spreadsheet">
       @for (plant of service.plants(); track plant.rowNumber) {
@@ -52,9 +24,6 @@
           [attr.aria-current]="service.selectedPlant()?.rowNumber === plant.rowNumber ? 'true' : null"
           (click)="selectPlant(plant.rowNumber)"
         >
-          <mat-icon matListItemIcon aria-hidden="true">
-            {{ plant.needsEnrichment ? 'pending_actions' : 'local_florist' }}
-          </mat-icon>
           <span matListItemTitle>{{ plant.name }}</span>
           <span matListItemLine>
             {{ plant.location || plant.species || 'Rij ' + plant.rowNumber }}
@@ -63,8 +32,6 @@
       }
     </mat-nav-list>
   </div>
-
-  <mat-divider></mat-divider>
 
   <div class="sidebar-actions">
     <button
@@ -75,25 +42,16 @@
       matTooltip="Maak een foto van een plant zodat AI deze herkent en toevoegt aan je spreadsheet"
     >
       <mat-icon aria-hidden="true">add_a_photo</mat-icon>
-      <span>Foto van plant toevoegen</span>
-    </button>
-    <button
-      matButton="tonal"
-      type="button"
-      (click)="service.createTemplateSheet()"
-      matTooltip="Maak een nieuwe voorbeeldsheet aan in je Google Drive"
-    >
-      <mat-icon aria-hidden="true">note_add</mat-icon>
-      <span>Voorbeeldsheet</span>
+      <span>Foto van plant</span>
     </button>
     <button
       matButton="tonal"
       type="button"
       (click)="openSettingsDialog()"
-      matTooltip="Google OAuth Client-ID en Gemini API-sleutel instellen"
+      matTooltip="Kies Google Sheet, Agenda en OAuth-instellingen"
     >
       <mat-icon aria-hidden="true">settings</mat-icon>
-      <span>Instellingen</span>
+      <span>Bronnen &amp; Opties</span>
     </button>
   </div>
 </nav>

@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { GardenService } from '../services/garden.service';
-import { NotificationService } from './../services/notification.service';
+import { NotificationService } from '../services/notification.service';
 
 @Component({
   selector: 'garden-settings-dialog',
@@ -32,6 +32,12 @@ export class SettingsDialogComponent {
   private readonly notifications = inject(NotificationService);
 
   protected readonly form = new FormGroup({
+    selectedSpreadsheetId: new FormControl(this.service.config().selectedSpreadsheetId, {
+      nonNullable: true,
+    }),
+    selectedCalendarId: new FormControl(this.service.config().selectedCalendarId, {
+      nonNullable: true,
+    }),
     clientId: new FormControl(this.service.config().clientId, { nonNullable: true }),
     geminiApiKey: new FormControl(this.service.config().geminiApiKey, { nonNullable: true }),
     planningHorizonDays: new FormControl(this.service.config().planningHorizonDays, {
@@ -40,14 +46,25 @@ export class SettingsDialogComponent {
     }),
   });
 
-  protected onSave(): void {
+  protected async onSave(): Promise<void> {
     const raw = this.form.getRawValue();
+    const prevSheet = this.service.config().selectedSpreadsheetId;
+    const prevCal = this.service.config().selectedCalendarId;
+
     this.service.updateConfig({
       clientId: raw.clientId.trim(),
       geminiApiKey: raw.geminiApiKey.trim(),
       planningHorizonDays: Number(raw.planningHorizonDays) || 90,
     });
-    this.notifications.info('Verbindingsinstellingen opgeslagen in de browser.');
+
+    if (raw.selectedSpreadsheetId && raw.selectedSpreadsheetId !== prevSheet) {
+      await this.service.selectSpreadsheet(raw.selectedSpreadsheetId);
+    }
+    if (raw.selectedCalendarId && raw.selectedCalendarId !== prevCal) {
+      await this.service.selectCalendar(raw.selectedCalendarId);
+    }
+
+    this.notifications.info('Instellingen opgeslagen.');
     this.dialogRef.close(true);
   }
 

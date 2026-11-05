@@ -50,17 +50,7 @@ export class DashboardComponent {
 
   protected readonly scheduleColumns = ['date', 'action', 'plants', 'locations', 'syncStatus'] as const;
 
-  protected readonly sheetColumns = [
-    'rowNumber',
-    'name',
-    'location',
-    'watering',
-    'pruning',
-    'trimming',
-    'fertilizing',
-    'careNotes',
-    'actions',
-  ] as const;
+  protected readonly sheetColumns = ['name', 'location', 'watering', 'pruning', 'fertilizing', 'actions'] as const;
 
   protected formatMonths(months: readonly MonthNumber[]): string {
     return formatMonthsCell(months);
@@ -72,19 +62,6 @@ export class DashboardComponent {
 
   protected monthName(month: MonthNumber): string {
     return MONTH_NAMES[month];
-  }
-
-  protected actionIcon(action: TaskActionType): string {
-    switch (action) {
-      case 'water':
-        return 'water_drop';
-      case 'prune':
-        return 'content_cut';
-      case 'trim':
-        return 'carpenter';
-      case 'fertilize':
-        return 'compost';
-    }
   }
 
   protected actionLabel(action: TaskActionType): string {
@@ -118,7 +95,7 @@ export class DashboardComponent {
 
   protected openAddPlantPhotoDialog(): void {
     this.dialog.open(PhotoPlantDialogComponent, {
-      width: '560px',
+      width: '540px',
       maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });

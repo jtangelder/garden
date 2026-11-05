@@ -1,12 +1,39 @@
-<h2 mat-dialog-title>Google Cloud &amp; Gemini Instellingen</h2>
+<h2 mat-dialog-title>Bronnen &amp; Google Instellingen</h2>
 
 <mat-dialog-content>
   <p class="settings-intro">
-    Deze app draait volledig in je browser en maakt rechtstreeks verbinding met je Google Drive, Spreadsheets en
-    Agenda via het gratis tegoed van de ingelogde gebruiker (€ 0 hostingkosten).
+    Kies je Google Drive-plantensheet en doelagenda, of stel je gratis Google OAuth Client-ID en Gemini API-sleutel in.
   </p>
 
   <form [formGroup]="form" class="settings-form">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Google Drive Plantensheet</mat-label>
+      <mat-select formControlName="selectedSpreadsheetId">
+        @for (sheet of service.spreadsheets(); track sheet.id) {
+          <mat-option [value]="sheet.id">{{ sheet.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Doel Google Agenda</mat-label>
+      <mat-select formControlName="selectedCalendarId">
+        @for (cal of service.calendars(); track cal.id) {
+          <mat-option [value]="cal.id">{{ cal.summary }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Planningshorizon voor Agenda</mat-label>
+      <mat-select formControlName="planningHorizonDays">
+        <mat-option [value]="30">Komende 30 dagen (1 maand)</mat-option>
+        <mat-option [value]="90">Komende 90 dagen (3 maanden)</mat-option>
+        <mat-option [value]="180">Komende 180 dagen (6 maanden)</mat-option>
+        <mat-option [value]="365">Komende 365 dagen (1 jaar)</mat-option>
+      </mat-select>
+    </mat-form-field>
+
     <mat-form-field appearance="outline">
       <mat-label>Google OAuth 2.0 Web Client-ID</mat-label>
       <input
@@ -30,19 +57,7 @@
         autocomplete="off"
       />
       <mat-icon matSuffix aria-hidden="true">auto_awesome</mat-icon>
-      <mat-hint>
-        Gebruikt je persoonlijke gratis AI Studio-tegoed voor onbekende planten (valt terug op de ingebouwde plantendatabase indien leeg)
-      </mat-hint>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Planningshorizon voor Agenda</mat-label>
-      <mat-select formControlName="planningHorizonDays">
-        <mat-option [value]="30">Komende 30 dagen (1 maand)</mat-option>
-        <mat-option [value]="90">Komende 90 dagen (3 maanden)</mat-option>
-        <mat-option [value]="180">Komende 180 dagen (6 maanden)</mat-option>
-        <mat-option [value]="365">Komende 365 dagen (1 jaar)</mat-option>
-      </mat-select>
+      <mat-hint>Voor AI-fotoherkenning en verzorgingsschema's op je eigen gratis tegoed</mat-hint>
     </mat-form-field>
   </form>
 
@@ -69,9 +84,8 @@
           <strong>Authorized JavaScript origins</strong>.
         </li>
         <li>
-          Plak de gegenereerde <strong>Client-ID</strong> hierboven. Maak optioneel een gratis API-sleutel aan via
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
-          voor automatische AI-plantenkennis.
+          Plak de gegenereerde <strong>Client-ID</strong> hierboven en maak optioneel een gratis sleutel aan bij
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.
         </li>
       </ol>
     </mat-expansion-panel>
@@ -80,7 +94,7 @@
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close>Annuleren</button>
-  <button mat-stroked-button type="button" (click)="onSave()">Instellingen opslaan</button>
+  <button mat-stroked-button type="button" (click)="onSave()">Opslaan</button>
   <button
     mat-flat-button
     color="primary"
@@ -89,6 +103,6 @@
     (click)="onSaveAndConnect()"
   >
     <mat-icon aria-hidden="true">login</mat-icon>
-    <span>Opslaan &amp; Inloggen met Google</span>
+    <span>Inloggen met Google</span>
   </button>
 </mat-dialog-actions>

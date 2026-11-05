@@ -7,16 +7,28 @@
 
 .top-toolbar {
   gap: 12px;
+  padding: 0 24px;
+  min-height: 56px;
+  background: var(--mat-sys-surface-container-low);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
 .toolbar-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
 
 .toolbar-spacer {
@@ -26,7 +38,7 @@
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .dashboard-main {
@@ -44,10 +56,23 @@
 }
 
 .tab-scroll-pane {
-  height: calc(100dvh - 116px);
+  height: calc(100dvh - 108px);
   overflow: auto;
-  padding: 16px 20px 32px;
+  padding: 24px 32px 48px;
   box-sizing: border-box;
+
+  @media (max-width: 700px) {
+    padding: 16px;
+  }
+}
+
+.content-container {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.detail-container {
+  max-width: 860px;
 }
 
 .schedule-controls-bar {
@@ -55,38 +80,73 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .horizon-field {
-  width: 150px;
+  width: 140px;
+}
+
+.table-surface {
+  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .garden-table {
   width: 100%;
+  background: transparent;
+
+  .mat-mdc-header-cell {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--mat-sys-on-surface-variant);
+    padding: 14px 20px;
+  }
+
+  .mat-mdc-cell {
+    font-size: 0.85rem;
+    padding: 14px 20px;
+    line-height: 1.45;
+  }
 }
 
-.cell-subtext {
-  font-size: 0.78rem;
+.cell-nowrap {
+  white-space: nowrap;
+}
+
+.cell-muted {
   color: var(--mat-sys-on-surface-variant);
 }
 
-.detail-pane {
-  max-width: 960px;
+.cell-subtext {
+  font-size: 0.76rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 2px;
+}
+
+.plant-detail-card {
+  background: var(--mat-sys-surface-container-lowest);
+  border-radius: 16px;
+  padding: 8px;
 }
 
 .plant-card-body {
-  padding-top: 12px;
+  padding-top: 16px;
 }
 
 .care-notes-copy {
-  margin: 0 0 16px;
-  font-size: 0.95rem;
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 75ch;
+  color: var(--mat-sys-on-surface);
 }
 
 .care-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }

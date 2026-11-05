@@ -10,9 +10,36 @@ html {
         tertiary: mat.$cyan-palette,
       ),
       typography: Inter,
-      density: 0,
+      density: -1,
     )
   );
+
+  /* Soft, natural sage/botanical green tokens (Light Mode) */
+  --mat-sys-primary: #2e6b3e;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #d6eddc;
+  --mat-sys-on-primary-container: #10381c;
+  --mat-sys-secondary: #4c6350;
+  --mat-sys-secondary-container: #cfe6d2;
+  --mat-sys-on-secondary-container: #142919;
+  --mat-sys-surface: #f4f7f3;
+  --mat-sys-surface-dim: #ebefe9;
+  --mat-sys-surface-container-lowest: #ffffff;
+  --mat-sys-surface-container-low: #eff3ee;
+  --mat-sys-surface-container: #e9eee8;
+  --mat-sys-surface-container-high: #e2e8e1;
+  --mat-sys-surface-container-highest: #dce3db;
+  --mat-sys-on-surface: #1e261f;
+  --mat-sys-on-surface-variant: #526054;
+  --mat-sys-outline: #7c8b7e;
+  --mat-sys-outline-variant: #d5ded5;
+
+  /* Proportional typography scale */
+  --mat-sys-body-large-size: 0.9rem;
+  --mat-sys-body-medium-size: 0.84rem;
+  --mat-sys-body-small-size: 0.76rem;
+  --mat-sys-title-medium-size: 0.95rem;
+  --mat-sys-title-large-size: 1.1rem;
 
   @media (prefers-color-scheme: dark) {
     @include mat.theme(
@@ -23,9 +50,29 @@ html {
           tertiary: mat.$cyan-palette,
         ),
         typography: Inter,
-        density: 0,
+        density: -1,
       )
     );
+
+    /* Soft, low-glare botanical dark palette */
+    --mat-sys-primary: #85cfa0;
+    --mat-sys-on-primary: #0d391c;
+    --mat-sys-primary-container: #1f4f2d;
+    --mat-sys-on-primary-container: #c6ebd0;
+    --mat-sys-secondary: #b3cbb7;
+    --mat-sys-secondary-container: #2b3d2f;
+    --mat-sys-on-secondary-container: #d5ebd8;
+    --mat-sys-surface: #131714;
+    --mat-sys-surface-dim: #0f1310;
+    --mat-sys-surface-container-lowest: #171c18;
+    --mat-sys-surface-container-low: #1a201b;
+    --mat-sys-surface-container: #1f2620;
+    --mat-sys-surface-container-high: #262e27;
+    --mat-sys-surface-container-highest: #303931;
+    --mat-sys-on-surface: #dfe5df;
+    --mat-sys-on-surface-variant: #96a398;
+    --mat-sys-outline: #647066;
+    --mat-sys-outline-variant: #29322b;
   }
 }
 
@@ -40,8 +87,11 @@ body {
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
   height: 100dvh;
   overflow: hidden;
+  text-align: start;
 }
 
 a {
@@ -60,8 +110,8 @@ a {
 }
 
 .app-sidenav {
-  width: 340px;
-  max-width: 88dvw;
+  width: 280px;
+  max-width: 85dvw;
   background: var(--mat-sys-surface-container-low);
   border-right: 1px solid var(--mat-sys-outline-variant);
 }
