@@ -87,7 +87,7 @@ export async function fetchSpreadsheetRows(
   const sheetTitle = meta.properties?.title ?? 'Mijn Tuinplanten';
   const firstTabName = meta.sheets?.[0]?.properties?.title ?? 'Planten';
 
-  const range = encodeURIComponent(`${firstTabName}!A1:J500`);
+  const range = encodeURIComponent(`${firstTabName}!A1:K500`);
   const valuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${range}`;
   const valuesData = await googleFetchJson<SheetValuesResponse>(valuesUrl, accessToken);
 
@@ -104,7 +104,7 @@ export async function writeSpreadsheetRows(
   firstTabName: string,
   rows: readonly (readonly string[])[],
 ): Promise<void> {
-  const range = encodeURIComponent(`${firstTabName}!A1:J${rows.length}`);
+  const range = encodeURIComponent(`${firstTabName}!A1:K${rows.length}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${range}?valueInputOption=USER_ENTERED`;
   await googleFetchJson<unknown>(url, accessToken, {
     method: 'PUT',

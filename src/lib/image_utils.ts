@@ -3,6 +3,7 @@ export interface EncodedPlantImage {
   mimeType: string;
   base64Data: string;
   dataUrl: string;
+  sheetPhotoDataUrl?: string;
 }
 
 export function extractBase64FromDataUrl(dataUrl: string): {
@@ -61,11 +62,33 @@ export async function compressAndEncodeImageFile(
     ctx.drawImage(img, 0, 0, width, height);
     const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
     const { mimeType, base64Data } = extractBase64FromDataUrl(compressedDataUrl);
+
+    // Create a compact thumbnail (< 40,000 chars) that fits safely in a Google Sheets cell (50,000 char limit)
+    const thumbDims = computeTargetDimensions(img.width, img.height, 300);
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = thumbDims.width;
+    thumbCanvas.height = thumbDims.height;
+    const thumbCtx = thumbCanvas.getContext('2d');
+    let sheetPhotoDataUrl = compressedDataUrl.length <= 45000 ? compressedDataUrl : undefined;
+    if (thumbCtx) {
+      thumbCtx.drawImage(img, 0, 0, thumbDims.width, thumbDims.height);
+      const candidate = thumbCanvas.toDataURL('image/jpeg', 0.68);
+      if (candidate.length <= 45000) {
+        sheetPhotoDataUrl = candidate;
+      } else {
+        const smallerCandidate = thumbCanvas.toDataURL('image/jpeg', 0.5);
+        if (smallerCandidate.length <= 45000) {
+          sheetPhotoDataUrl = smallerCandidate;
+        }
+      }
+    }
+
     return {
       fileName: file.name,
       mimeType,
       base64Data,
       dataUrl: compressedDataUrl,
+      sheetPhotoDataUrl,
     };
   } catch {
     const { mimeType, base64Data } = extractBase64FromDataUrl(rawDataUrl);

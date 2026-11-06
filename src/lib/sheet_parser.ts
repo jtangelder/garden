@@ -11,6 +11,7 @@ export const SHEET_HEADERS: readonly string[] = [
   'Bemestingsmaanden',
   'Verzorgingsinstructies',
   'Laatst Verrijkt',
+  'Foto',
 ];
 
 const MONTH_LOOKUP: Record<string, MonthNumber> = {
@@ -139,6 +140,20 @@ function parsePositiveIntOrZero(raw: string | undefined): number | null {
   return parsed;
 }
 
+function parsePhotoCell(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const formulaMatch = /^=IMAGE\(\s*"([^"]+)"/i.exec(trimmed);
+  if (formulaMatch) {
+    return formulaMatch[1];
+  }
+  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return undefined;
+}
+
 export function isHeaderRow(row: readonly string[]): boolean {
   const first = (row[0] ?? '').trim().toLowerCase();
   return first === 'plantnaam' || first === 'plant name' || first === 'plant' || first === 'naam' || first === 'name';
@@ -168,6 +183,7 @@ export function parseSheetRows(rows: readonly (readonly string[])[]): PlantRecor
     const fertilizingMonths = parseMonthsCell(row[7]);
     const careNotes = (row[8] ?? '').trim();
     const lastEnriched = (row[9] ?? '').trim();
+    const photoUrl = parsePhotoCell(row[10]);
 
     const hasScheduleData =
       wateringDaysSummer !== null &&
@@ -187,6 +203,7 @@ export function parseSheetRows(rows: readonly (readonly string[])[]): PlantRecor
       careNotes,
       lastEnriched,
       needsEnrichment: !hasScheduleData,
+      ...(photoUrl ? { photoUrl } : {}),
     });
   }
 
@@ -224,5 +241,6 @@ export function serializePlantRow(plant: PlantRecord): string[] {
     formatMonthsCell(plant.fertilizingMonths),
     plant.careNotes,
     plant.lastEnriched,
+    plant.photoUrl ?? '',
   ];
 }

@@ -62,6 +62,7 @@ export interface PlantRecord {
   careNotes: string;
   lastEnriched: string;
   needsEnrichment: boolean;
+  photoUrl?: string;
 }
 
 export type TaskSyncStatus = 'new' | 'update' | 'synced';

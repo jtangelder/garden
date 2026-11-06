@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -25,7 +26,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MONTH_NAMES, type MonthNumber, type PlantRecord, type TaskActionType } from '../lib/models';
 import { groupTasksByMonth, todayIso } from '../lib/scheduler';
-import { formatMonthsCell, formatMonthsFull } from '../lib/sheet_parser';
+import { formatMonthsCell, formatMonthsFull, parseMonthsCell } from '../lib/sheet_parser';
 import { GardenService } from '../services/garden.service';
 import { PhotoPlantDialogComponent } from './photo_plant_dialog';
 import { SettingsDialogComponent } from './settings_dialog';
@@ -34,6 +35,7 @@ import { WelcomeComponent } from './welcome';
 @Component({
   selector: 'garden-dashboard',
   imports: [
+    ReactiveFormsModule,
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
@@ -62,6 +64,19 @@ export class DashboardComponent {
   private readonly plantDetailDialogTpl = viewChild<TemplateRef<unknown>>('plantDetailDialogTpl');
 
   protected readonly plantSearchQuery = signal('');
+  protected readonly editingPlant = signal(false);
+
+  protected readonly plantEditForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    species: new FormControl('', { nonNullable: true }),
+    location: new FormControl('', { nonNullable: true }),
+    wateringDaysSummer: new FormControl<number | null>(null),
+    wateringDaysWinter: new FormControl<number | null>(null),
+    pruningMonthsText: new FormControl('', { nonNullable: true }),
+    trimmingMonthsText: new FormControl('', { nonNullable: true }),
+    fertilizingMonthsText: new FormControl('', { nonNullable: true }),
+    careNotes: new FormControl('', { nonNullable: true }),
+  });
 
   protected readonly todayDateIso = computed(() => todayIso());
 
@@ -130,12 +145,56 @@ export class DashboardComponent {
 
   protected openPlantDetailDialog(plant: PlantRecord): void {
     this.service.selectedPlantRow.set(plant.rowNumber);
+    this.editingPlant.set(false);
+    this.populateEditForm(plant);
     const tpl = this.plantDetailDialogTpl();
     if (!tpl) return;
     this.dialog.open(tpl, {
-      width: '620px',
+      width: '640px',
       maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
+    });
+  }
+
+  protected startEditingPlant(plant: PlantRecord): void {
+    this.populateEditForm(plant);
+    this.editingPlant.set(true);
+  }
+
+  protected cancelEditingPlant(): void {
+    this.editingPlant.set(false);
+  }
+
+  protected async saveEditedPlant(rowNumber: number): Promise<void> {
+    if (this.plantEditForm.invalid) return;
+    const raw = this.plantEditForm.getRawValue();
+    await this.service.updatePlantDetails(rowNumber, {
+      name: raw.name.trim(),
+      species: raw.species.trim(),
+      location: raw.location.trim(),
+      wateringDaysSummer:
+        raw.wateringDaysSummer !== null && raw.wateringDaysSummer >= 0 ? Number(raw.wateringDaysSummer) : null,
+      wateringDaysWinter:
+        raw.wateringDaysWinter !== null && raw.wateringDaysWinter >= 0 ? Number(raw.wateringDaysWinter) : null,
+      pruningMonths: parseMonthsCell(raw.pruningMonthsText),
+      trimmingMonths: parseMonthsCell(raw.trimmingMonthsText),
+      fertilizingMonths: parseMonthsCell(raw.fertilizingMonthsText),
+      careNotes: raw.careNotes.trim(),
+    });
+    this.editingPlant.set(false);
+  }
+
+  private populateEditForm(plant: PlantRecord): void {
+    this.plantEditForm.setValue({
+      name: plant.name,
+      species: plant.species,
+      location: plant.location,
+      wateringDaysSummer: plant.wateringDaysSummer,
+      wateringDaysWinter: plant.wateringDaysWinter,
+      pruningMonthsText: plant.pruningMonths.length ? formatMonthsCell(plant.pruningMonths) : '',
+      trimmingMonthsText: plant.trimmingMonths.length ? formatMonthsCell(plant.trimmingMonths) : '',
+      fertilizingMonthsText: plant.fertilizingMonths.length ? formatMonthsCell(plant.fertilizingMonths) : '',
+      careNotes: plant.careNotes,
     });
   }
 
@@ -150,6 +209,16 @@ export class DashboardComponent {
   protected removeSelectedPlantAndClose(rowNumber: number): void {
     this.dialog.closeAll();
     void this.service.removePlant(rowNumber);
+  }
+
+  protected async onPlantPhotoChange(event: Event, rowNumber: number): Promise<void> {
+    const inputEl = event.target as HTMLInputElement | null;
+    const file = inputEl?.files?.[0];
+    if (!file) return;
+    if (inputEl) {
+      inputEl.value = '';
+    }
+    await this.service.updatePlantPhoto(rowNumber, file);
   }
 
   protected async onConnectClick(): Promise<void> {

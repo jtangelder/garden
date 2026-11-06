@@ -83,6 +83,31 @@ describe('sheet_parser', () => {
       'Apr, Jun',
       'Snoei in het voorjaar.',
       '2026-11-05',
+      '',
     ]);
+  });
+
+  it('parses and serializes plant photo data URLs and IMAGE formulas in column K', () => {
+    const rows = [
+      SHEET_HEADERS,
+      [
+        'Lavendel',
+        'Lavandula',
+        'Terras',
+        '7',
+        '0',
+        'Apr',
+        'Aug',
+        'Apr',
+        'Zonnig.',
+        '2026-11-05',
+        'data:image/jpeg;base64,/9j/4AAQ',
+      ],
+      ['Klimroos', 'Rosa', 'Pergola', '4', '0', 'Mrt', 'Jul', 'Apr', 'Klimplant.', '2026-11-05', '=IMAGE("https://example.com/rose.jpg")'],
+    ];
+    const parsed = parseSheetRows(rows);
+    expect(parsed[0].photoUrl).toBe('data:image/jpeg;base64,/9j/4AAQ');
+    expect(parsed[1].photoUrl).toBe('https://example.com/rose.jpg');
+    expect(serializePlantRow(parsed[0])[10]).toBe('data:image/jpeg;base64,/9j/4AAQ');
   });
 });

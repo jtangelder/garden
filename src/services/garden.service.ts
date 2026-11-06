@@ -29,6 +29,7 @@ import { NotificationService } from './notification.service';
 
 const STORAGE_KEY = 'garden_connection_config_v1';
 const TOKEN_STORAGE_KEY = 'garden_oauth_session_v1';
+const CACHED_GARDEN_STORAGE_KEY = 'garden_cached_workspace_v1';
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -46,6 +47,14 @@ interface GisTokenResponse {
 interface SavedOAuthSession {
   accessToken: string;
   expiresAt: number;
+}
+
+interface CachedGardenWorkspace {
+  sheetTitle: string;
+  firstTabName: string;
+  plants: PlantRecord[];
+  spreadsheets: DriveSpreadsheet[];
+  calendars: CalendarSummary[];
 }
 
 interface GisTokenClient {
@@ -79,6 +88,7 @@ export class GardenService {
 
   readonly connected = signal(false);
   readonly isDemo = signal(false);
+  readonly isOfflineCache = signal(false);
   readonly connecting = signal(false);
   readonly loadingSheet = signal(false);
   readonly enriching = signal(false);
@@ -148,11 +158,32 @@ export class GardenService {
 
   readonly hasConfiguredOAuth = computed(() => Boolean(this.config().clientId.trim()));
 
+  readonly activeSpreadsheetUrl = computed<string | null>(() => {
+    if (this.isDemo()) return null;
+    const sheet = this.selectedSpreadsheet();
+    if (sheet?.webViewLink) return sheet.webViewLink;
+    const id = this.config().selectedSpreadsheetId;
+    if (id && !id.startsWith('demo-')) {
+      return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/edit`;
+    }
+    return null;
+  });
+
+  readonly activeCalendarUrl = computed<string | null>(() => {
+    if (this.isDemo()) return null;
+    const calId = this.config().selectedCalendarId;
+    if (calId && !calId.startsWith('demo-')) {
+      return `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calId)}`;
+    }
+    return 'https://calendar.google.com/calendar/u/0/r';
+  });
+
   async initializeSession(): Promise<void> {
     const savedToken = this.loadSavedToken();
     if (savedToken && this.config().clientId.trim()) {
       this.accessToken = savedToken;
       this.isDemo.set(false);
+      this.isOfflineCache.set(false);
       this.connected.set(true);
       try {
         await this.refreshGoogleResources();
@@ -161,6 +192,22 @@ export class GardenService {
         this.clearSavedToken();
       }
     }
+
+    const cached = this.loadCachedWorkspace();
+    if (cached && this.config().clientId.trim()) {
+      this.accessToken = '';
+      this.isDemo.set(false);
+      this.isOfflineCache.set(true);
+      this.connected.set(true);
+      this.sheetTitle.set(cached.sheetTitle);
+      this.firstTabName.set(cached.firstTabName);
+      this.plants.set(cached.plants);
+      this.spreadsheets.set(cached.spreadsheets);
+      this.calendars.set(cached.calendars);
+      this.selectedPlantRow.set(cached.plants[0]?.rowNumber ?? null);
+      return;
+    }
+
     this.enableDemo();
   }
 
@@ -168,6 +215,7 @@ export class GardenService {
     this.accessToken = '';
     this.connected.set(true);
     this.isDemo.set(true);
+    this.isOfflineCache.set(false);
 
     const demoSheets: DriveSpreadsheet[] = [
       {
@@ -250,6 +298,7 @@ export class GardenService {
       this.zone.run(() => {
         this.accessToken = tokenResponse.token;
         this.isDemo.set(false);
+        this.isOfflineCache.set(false);
         this.connected.set(true);
       });
 
@@ -270,6 +319,7 @@ export class GardenService {
       window.google.accounts.oauth2.revoke(this.accessToken);
     }
     this.clearSavedToken();
+    this.clearCachedWorkspace();
     this.enableDemo();
     this.notifications.info('Teruggeschakeld naar de Demo-modus.');
   }
@@ -423,7 +473,9 @@ export class GardenService {
     }
   }
 
-  async addIdentifiedPlants(items: ReadonlyArray<{ result: IdentifiedPlantResult; location: string }>): Promise<void> {
+  async addIdentifiedPlants(
+    items: ReadonlyArray<{ result: IdentifiedPlantResult; location: string; photoUrl?: string }>,
+  ): Promise<void> {
     if (!items.length) return;
 
     const current = this.plants();
@@ -445,6 +497,7 @@ export class GardenService {
         careNotes: item.result.schedule.careNotes,
         lastEnriched: today,
         needsEnrichment: false,
+        ...(item.photoUrl ? { photoUrl: item.photoUrl } : {}),
       };
     });
 
@@ -454,7 +507,50 @@ export class GardenService {
 
     await this.persistPlantsToSheet(updatedList);
     const names = added.map(p => p.name).join(', ');
-    this.notifications.info(`Fotoherkenning opgeslagen in spreadsheet: ${names}.`);
+    this.notifications.info(`Foto en plantgegevens opgeslagen in spreadsheet: ${names}.`);
+  }
+
+  async updatePlantPhoto(rowNumber: number, file: File): Promise<void> {
+    this.identifyingPhoto.set(true);
+    try {
+      const encoded = await compressAndEncodeImageFile(file);
+      const photoUrl = encoded.sheetPhotoDataUrl ?? encoded.dataUrl;
+      const updated = this.plants().map(p => (p.rowNumber === rowNumber ? { ...p, photoUrl } : p));
+      this.plants.set(updated);
+      await this.persistPlantsToSheet(updated);
+      const target = updated.find(p => p.rowNumber === rowNumber);
+      this.notifications.info(`Foto voor "${target?.name ?? 'plant'}" opgeslagen in de spreadsheet.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.notifications.error(`Kon foto niet opslaan: ${msg}`);
+    } finally {
+      this.identifyingPhoto.set(false);
+    }
+  }
+
+  async updatePlantDetails(rowNumber: number, updates: Partial<PlantRecord>): Promise<void> {
+    const updated = this.plants().map(p => {
+      if (p.rowNumber !== rowNumber) return p;
+      const next: PlantRecord = {
+        ...p,
+        ...updates,
+        rowNumber: p.rowNumber,
+      };
+      const hasScheduleData =
+        next.wateringDaysSummer !== null &&
+        next.wateringDaysWinter !== null &&
+        (next.pruningMonths.length > 0 ||
+          next.trimmingMonths.length > 0 ||
+          next.fertilizingMonths.length > 0 ||
+          next.careNotes.length > 0);
+      next.needsEnrichment = !hasScheduleData;
+      return next;
+    });
+
+    this.plants.set(updated);
+    await this.persistPlantsToSheet(updated);
+    const target = updated.find(p => p.rowNumber === rowNumber);
+    this.notifications.info(`Gegevens van "${target?.name ?? 'plant'}" bijgewerkt in de spreadsheet.`);
   }
 
   async removePlant(rowNumber: number): Promise<void> {
@@ -576,6 +672,8 @@ export class GardenService {
 
       if (parsed.some(p => p.needsEnrichment)) {
         await this.enrichPlants(false);
+      } else {
+        this.saveCachedWorkspace();
       }
     } finally {
       this.loadingSheet.set(false);
@@ -593,6 +691,9 @@ export class GardenService {
   }
 
   private async persistPlantsToSheet(plants: readonly PlantRecord[]): Promise<void> {
+    if (!this.isDemo()) {
+      this.saveCachedWorkspace(plants);
+    }
     if (this.isDemo() || !this.accessToken) {
       return;
     }
@@ -711,6 +812,52 @@ export class GardenService {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  private saveCachedWorkspace(plantsOverride?: readonly PlantRecord[]): void {
+    try {
+      if (typeof localStorage !== 'undefined' && !this.isDemo()) {
+        const workspace: CachedGardenWorkspace = {
+          sheetTitle: this.sheetTitle(),
+          firstTabName: this.firstTabName(),
+          plants: [...(plantsOverride ?? this.plants())],
+          spreadsheets: this.spreadsheets(),
+          calendars: this.calendars(),
+        };
+        localStorage.setItem(CACHED_GARDEN_STORAGE_KEY, JSON.stringify(workspace));
+      }
+    } catch {
+      // Ignore storage quota errors
+    }
+  }
+
+  private loadCachedWorkspace(): CachedGardenWorkspace | null {
+    try {
+      if (typeof localStorage === 'undefined') return null;
+      const raw = localStorage.getItem(CACHED_GARDEN_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<CachedGardenWorkspace>;
+      if (!parsed.plants || !Array.isArray(parsed.plants)) return null;
+      return {
+        sheetTitle: parsed.sheetTitle ?? 'Mijn Tuinplanten',
+        firstTabName: parsed.firstTabName ?? 'Planten',
+        plants: parsed.plants,
+        spreadsheets: parsed.spreadsheets ?? [],
+        calendars: parsed.calendars ?? [],
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private clearCachedWorkspace(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(CACHED_GARDEN_STORAGE_KEY);
       }
     } catch {
       // Ignore storage errors

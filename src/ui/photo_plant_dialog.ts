@@ -18,6 +18,7 @@ export interface ScannedPlantPhotoItem {
   id: number;
   fileName: string;
   dataUrl: string;
+  sheetPhotoDataUrl?: string;
   analyzing: boolean;
   error?: string;
   result?: IdentifiedPlantResult;
@@ -100,6 +101,7 @@ export class PhotoPlantDialogComponent {
               ? {
                   ...item,
                   dataUrl: image.dataUrl,
+                  sheetPhotoDataUrl: image.sheetPhotoDataUrl ?? image.dataUrl,
                   analyzing: false,
                   result,
                 }
@@ -139,6 +141,7 @@ export class PhotoPlantDialogComponent {
         ready.map(item => ({
           result: item.result,
           location: loc,
+          photoUrl: item.sheetPhotoDataUrl ?? item.dataUrl,
         })),
       );
       this.dialogRef.close(true);
