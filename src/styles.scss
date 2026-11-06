@@ -40,6 +40,7 @@ html {
   --mat-sys-body-small-size: 0.76rem;
   --mat-sys-title-medium-size: 0.95rem;
   --mat-sys-title-large-size: 1.1rem;
+  --mat-dialog-container-max-width: 680px;
 
   @media (prefers-color-scheme: dark) {
     @include mat.theme(

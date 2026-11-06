@@ -231,7 +231,7 @@ export class DashboardComponent {
 
   protected openAddPlantPhotoDialog(): void {
     this.dialog.open(PhotoPlantDialogComponent, {
-      width: '540px',
+      width: '620px',
       maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });
@@ -239,7 +239,7 @@ export class DashboardComponent {
 
   protected openSettingsDialog(): void {
     this.dialog.open(SettingsDialogComponent, {
-      width: '560px',
+      width: '620px',
       maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });
@@ -247,8 +247,8 @@ export class DashboardComponent {
 
   protected openAboutDialog(): void {
     this.dialog.open(WelcomeComponent, {
-      width: '500px',
-      maxWidth: '92dvw',
+      width: '620px',
+      maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });
   }

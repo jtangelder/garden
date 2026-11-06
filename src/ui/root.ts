@@ -42,8 +42,8 @@ export class RootComponent {
 
   private openWelcomeDialog(): void {
     this.dialog.open(WelcomeComponent, {
-      width: '500px',
-      maxWidth: '92dvw',
+      width: '620px',
+      maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });
   }

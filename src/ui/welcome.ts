@@ -2,13 +2,12 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { GardenService } from '../services/garden.service';
 import { SettingsDialogComponent } from './settings_dialog';
 
 @Component({
   selector: 'garden-welcome',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatListModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './welcome.ng.html',
   styleUrl: './welcome.scss',
@@ -26,7 +25,7 @@ export class WelcomeComponent {
   protected onOpenSettings(): void {
     this.dialogRef.close();
     this.dialog.open(SettingsDialogComponent, {
-      width: '560px',
+      width: '620px',
       maxWidth: '94dvw',
       autoFocus: 'first-tabbable',
     });

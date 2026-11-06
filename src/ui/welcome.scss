@@ -1,10 +1,42 @@
 .welcome-copy {
   margin: 0 0 12px;
   color: var(--mat-sys-on-surface-variant);
+  line-height: 1.55;
+}
+
+.welcome-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.welcome-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+.welcome-feature-title {
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+  font-size: 0.88rem;
+}
+
+.welcome-feature-desc {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .disclaimer-repo {
-  margin: 12px 0 0;
-  font-size: 0.85rem;
+  margin: 16px 0 0;
+  font-size: 0.82rem;
   color: var(--mat-sys-on-surface-variant);
 }
