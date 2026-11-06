@@ -31,12 +31,10 @@ export class RootComponent {
   );
 
   constructor() {
-    if (!this.service.connected()) {
-      this.service.enableDemo();
-    }
+    void this.service.initializeSession();
 
     afterNextRender(() => {
-      if (!this.service.connected() || this.service.isDemo()) {
+      if (!this.service.hasConfiguredOAuth() && this.service.isDemo()) {
         this.openWelcomeDialog();
       }
     });

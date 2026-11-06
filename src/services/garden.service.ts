@@ -28,6 +28,7 @@ import { applyCareScheduleToPlant, parseSheetRows, SHEET_HEADERS, serializePlant
 import { NotificationService } from './notification.service';
 
 const STORAGE_KEY = 'garden_connection_config_v1';
+const TOKEN_STORAGE_KEY = 'garden_oauth_session_v1';
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -37,8 +38,14 @@ const GOOGLE_SCOPES = [
 
 interface GisTokenResponse {
   access_token?: string;
+  expires_in?: number | string;
   error?: string;
   error_description?: string;
+}
+
+interface SavedOAuthSession {
+  accessToken: string;
+  expiresAt: number;
 }
 
 interface GisTokenClient {
@@ -139,6 +146,24 @@ export class GardenService {
     return this.calendars().find(c => c.id === id) ?? null;
   });
 
+  readonly hasConfiguredOAuth = computed(() => Boolean(this.config().clientId.trim()));
+
+  async initializeSession(): Promise<void> {
+    const savedToken = this.loadSavedToken();
+    if (savedToken && this.config().clientId.trim()) {
+      this.accessToken = savedToken;
+      this.isDemo.set(false);
+      this.connected.set(true);
+      try {
+        await this.refreshGoogleResources();
+        return;
+      } catch {
+        this.clearSavedToken();
+      }
+    }
+    this.enableDemo();
+  }
+
   enableDemo(): void {
     this.accessToken = '';
     this.connected.set(true);
@@ -168,8 +193,8 @@ export class GardenService {
 
     this.config.update(curr => ({
       ...curr,
-      selectedSpreadsheetId: 'demo-sheet-1',
-      selectedCalendarId: 'demo-cal-garden',
+      selectedSpreadsheetId: curr.selectedSpreadsheetId || 'demo-sheet-1',
+      selectedCalendarId: curr.selectedCalendarId || 'demo-cal-garden',
     }));
   }
 
@@ -197,7 +222,11 @@ export class GardenService {
         throw new Error('Google Identity Services kon niet worden geladen.');
       }
 
-      const token = await new Promise<string>((resolve, reject) => {
+      const hasPreviousSelection = Boolean(
+        this.config().selectedSpreadsheetId && !this.config().selectedSpreadsheetId.startsWith('demo-'),
+      );
+
+      const tokenResponse = await new Promise<{ token: string; expiresInSeconds: number }>((resolve, reject) => {
         const client = oauth2.initTokenClient({
           client_id: clientId,
           scope: GOOGLE_SCOPES,
@@ -206,17 +235,20 @@ export class GardenService {
               reject(new Error(response.error_description || response.error || 'OAuth mislukt'));
               return;
             }
-            resolve(response.access_token);
+            const expiresInSeconds = Number(response.expires_in) || 3600;
+            resolve({ token: response.access_token, expiresInSeconds });
           },
           error_callback: err => {
             reject(new Error(err.message || err.type || 'OAuth-venster gesloten'));
           },
         });
-        client.requestAccessToken({ prompt: 'consent' });
+        client.requestAccessToken({ prompt: hasPreviousSelection ? '' : 'consent' });
       });
 
+      this.saveToken(tokenResponse.token, tokenResponse.expiresInSeconds);
+
       this.zone.run(() => {
-        this.accessToken = token;
+        this.accessToken = tokenResponse.token;
         this.isDemo.set(false);
         this.connected.set(true);
       });
@@ -237,6 +269,7 @@ export class GardenService {
     if (this.accessToken && window.google?.accounts?.oauth2?.revoke) {
       window.google.accounts.oauth2.revoke(this.accessToken);
     }
+    this.clearSavedToken();
     this.enableDemo();
     this.notifications.info('Teruggeschakeld naar de Demo-modus.');
   }
@@ -625,10 +658,62 @@ export class GardenService {
   private saveConfig(config: GoogleConnectionConfig): void {
     try {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        const prev = this.loadSavedConfig();
+        const toPersist: GoogleConnectionConfig = {
+          clientId: config.clientId.trim(),
+          geminiApiKey: config.geminiApiKey.trim(),
+          selectedSpreadsheetId: config.selectedSpreadsheetId.startsWith('demo-')
+            ? prev.selectedSpreadsheetId
+            : config.selectedSpreadsheetId,
+          selectedCalendarId: config.selectedCalendarId.startsWith('demo-')
+            ? prev.selectedCalendarId
+            : config.selectedCalendarId,
+          planningHorizonDays: Number(config.planningHorizonDays) || 90,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
       }
     } catch {
       // Ignore storage quota errors
+    }
+  }
+
+  private loadSavedToken(): string {
+    try {
+      if (typeof localStorage === 'undefined') return '';
+      const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (!raw) return '';
+      const parsed = JSON.parse(raw) as Partial<SavedOAuthSession>;
+      if (!parsed.accessToken || !parsed.expiresAt || Date.now() >= parsed.expiresAt) {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        return '';
+      }
+      return parsed.accessToken;
+    } catch {
+      return '';
+    }
+  }
+
+  private saveToken(accessToken: string, expiresInSeconds: number): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const session: SavedOAuthSession = {
+          accessToken,
+          expiresAt: Date.now() + Math.max(60, expiresInSeconds - 60) * 1000,
+        };
+        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(session));
+      }
+    } catch {
+      // Ignore storage quota errors
+    }
+  }
+
+  private clearSavedToken(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage errors
     }
   }
 }

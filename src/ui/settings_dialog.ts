@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -46,6 +47,16 @@ export class SettingsDialogComponent {
     }),
   });
 
+  constructor() {
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(raw => {
+      this.service.updateConfig({
+        clientId: (raw.clientId ?? '').trim(),
+        geminiApiKey: (raw.geminiApiKey ?? '').trim(),
+        planningHorizonDays: Number(raw.planningHorizonDays) || 90,
+      });
+    });
+  }
+
   protected async onSave(): Promise<void> {
     const raw = this.form.getRawValue();
     const prevSheet = this.service.config().selectedSpreadsheetId;
@@ -64,7 +75,7 @@ export class SettingsDialogComponent {
       await this.service.selectCalendar(raw.selectedCalendarId);
     }
 
-    this.notifications.info('Instellingen opgeslagen.');
+    this.notifications.info('Instellingen opgeslagen in je browser.');
     this.dialogRef.close(true);
   }
 
